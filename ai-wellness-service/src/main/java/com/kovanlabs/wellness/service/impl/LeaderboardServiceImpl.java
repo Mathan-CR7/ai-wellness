@@ -58,15 +58,12 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                     .totalCaloriesBurned(calories != null ? calories : 0.0)
                     .build());
         }
-
-        // Sort descending by total steps
         entries.sort(Comparator.comparing(LeaderboardEntry::getTotalSteps).reversed());
 
-        // Assign ranks
-        for (int i = 0; i < entries.size(); i++) {
+        for (int i = 0; i < entries.size(); i++)
+        {
             entries.get(i).setRank(i + 1);
         }
-
         return TeamLeaderboardResponse.builder()
                 .teamId(teamId)
                 .teamName(team.getName())

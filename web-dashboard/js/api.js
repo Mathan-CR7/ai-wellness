@@ -2,7 +2,7 @@
    API Client — REST API Wrapper with Bearer Token Injection
    =========================================================================== */
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://ai-wellness-jtid.onrender.com';
 
 const ApiClient = {
   getToken() {

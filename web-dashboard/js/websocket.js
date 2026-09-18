@@ -15,7 +15,7 @@ const WebSocketManager = {
     if (wsStatusText) wsStatusText.innerText = 'Connecting WebSocket...';
 
     // 1. Create SockJS socket connection to Spring Boot WebSocket Endpoint
-    const socket = new SockJS('http://localhost:8080/ws-wellness');
+    const socket = new SockJS(`${API_BASE_URL}/ws`);
     this.stompClient = Stomp.over(socket);
     
     // Disable debug logging for clean console
