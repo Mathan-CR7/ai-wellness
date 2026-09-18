@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Wellness — Live Health Dashboard</title>
+  <meta name="description" content="Real-time physical wellness dashboard powered by Android Health Connect, Spring Boot, and Google Gemini AI.">
+  
+  <!-- CSS Design System -->
+  <link rel="stylesheet" href="css/index.css">
+
+  <!-- SockJS & STOMP.js for Real-Time WebSocket Connection -->
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <span>Wellness Engine</span>
+    </div>
+    <div class="nav-controls">
+      <div id="wsBadge" class="badge-ws" style="display: none;">
+        <span class="dot"></span>
+        <span id="wsStatusText">Live WebSocket Connected</span>
+      </div>
+      <span id="userInfo" style="font-size: 0.9rem; color: var(--text-secondary);"></span>
+      <button id="logoutBtn" class="btn-secondary" style="display: none;">Logout</button>
+    </div>
+  </header>
+
+  <!-- Login Modal Overlay -->
+  <div id="authOverlay" class="auth-overlay">
+    <div class="glass-card auth-card">
+      <div class="brand-icon" style="margin: 0 auto 1rem; width: 48px; height: 48px; font-size: 1.5rem;">⚡</div>
+      <h2 style="font-family: var(--font-heading); margin-bottom: 0.5rem;">Welcome Back</h2>
+      <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.5rem;">Sign in to view your Health Connect data</p>
+      
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label" for="loginEmail">Email Address</label>
+          <input type="email" id="loginEmail" class="form-input" placeholder="user1@example.com" value="user1@example.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" value="Password123!" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">Connect Dashboard</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <main class="container" id="mainContent" style="display: none;">
+    <div class="dashboard-grid">
+      
+      <!-- Left Column: Circular Step Ring Meter -->
+      <section class="glass-card step-ring-widget">
+        <h3 style="font-family: var(--font-heading); font-size: 1.1rem; color: var(--text-secondary);">Today's Health Connect Sync</h3>
+        
+        <div class="ring-container">
+          <svg class="ring-svg" viewBox="0 0 120 120">
+            <defs>
+              <linearGradient id="gradient-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="hsl(217, 91%, 60%)" />
+                <stop offset="100%" stop-color="hsl(158, 64%, 52%)" />
+              </linearGradient>
+            </defs>
+            <circle class="ring-bg" cx="60" cy="60" r="50" stroke-width="10" fill="none" />
+            <circle id="ringProgress" class="ring-progress" cx="60" cy="60" r="50" stroke-width="10" fill="none"
+                    stroke-dasharray="314.159" stroke-dashoffset="314.159" />
+          </svg>
+          <div class="ring-center-content">
+            <div id="stepDisplay" class="step-number">0</div>
+            <div class="step-label">/ 10,000 STEPS</div>
+          </div>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-item">
+            <span id="distDisplay" class="metric-val">0.00</span>
+            <span class="metric-lbl">KM DISTANCE</span>
+          </div>
+          <div class="metric-item">
+            <span id="calDisplay" class="metric-val">0</span>
+            <span class="metric-lbl">KCAL BURNED</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem; text-align: left; background: rgba(255,255,255,0.03); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-glass);">
+          <div style="font-size: 0.75rem; color: var(--text-muted);">SYNC DEVICE SOURCE</div>
+          <div id="sourceDisplay" style="font-size: 0.88rem; font-weight: 600; color: var(--text-primary); margin-top: 0.15rem;">Health Connect (Waiting)</div>
+        </div>
+      </section>
+
+      <!-- Right Column: Real-Time WebSocket Team Leaderboard -->
+      <section class="glass-card leaderboard-widget">
+        <div class="widget-header">
+          <div>
+            <h3 class="widget-title">Live Team Leaderboard</h3>
+            <p style="font-size: 0.82rem; color: var(--text-secondary);">Real-time STOMP rank streaming across team members</p>
+          </div>
+          <span style="font-size: 0.75rem; background: rgba(59,130,246,0.15); color: var(--color-primary); padding: 0.25rem 0.65rem; border-radius: 999px; font-weight: 600;">TEAM #1</span>
+        </div>
+
+        <table class="table-custom">
+          <thead>
+            <tr>
+              <th style="width: 60px;">Rank</th>
+              <th>Member</th>
+              <th style="text-align: right;">Total Steps</th>
+              <th style="text-align: right;">Distance</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody">
+            <tr>
+              <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                Connecting to live WebSocket stream...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Floating AI Assistant Chat Button (FAB) -->
+  <button id="chatFab" class="chat-fab" title="Chat with Gemini AI Assistant">✨</button>
+
+  <!-- Floating Slide-Out Chat Drawer -->
+  <div id="chatDrawer" class="glass-card chat-drawer">
+    <div class="chat-header">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-size: 1.2rem;">✨</span>
+        <span class="chat-title">Gemini AI Assistant</span>
+      </div>
+      <button id="chatCloseBtn" class="chat-close-btn">&times;</button>
+    </div>
+    
+    <div id="chatBody" class="chat-body">
+      <div class="chat-msg ai">
+        Hello! I'm your AI Wellness Assistant. I can analyze your Health Connect step data, calculate activity trends, and answer your fitness questions!
+      </div>
+    </div>
+
+    <form id="chatForm" class="chat-footer">
+      <input type="text" id="chatInput" class="chat-input" placeholder="Ask AI about your daily steps..." autocomplete="off">
+      <button type="submit" class="btn-primary" style="padding: 0.6rem 1rem;">Send</button>
+    </form>
+  </div>
+
+  <!-- JavaScript Modules -->
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/websocket.js"></script>
+  <script src="js/ai-chat.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

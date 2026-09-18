@@ -1,0 +1,17 @@
+.gradle/
+.idea/
+build/
+logs/
+
+*.iml
+
+.env
+application-local.properties
+application-secret.properties
+
+local.properties
+
+*.log
+
+# Android
+**/build/

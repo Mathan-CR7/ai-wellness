@@ -1,0 +1,61 @@
+# ===========================================================================
+# docker-compose.yml — Local Development
+#
+# Starts MySQL for local development.
+# The Spring Boot app runs separately (via `mvn spring-boot:run`)
+# so that hot-reload and IDE debugging work naturally.
+#
+# Phase 20 will add the full production-ready compose file.
+#
+# Usage:
+#   docker compose up -d mysql
+# ===========================================================================
+
+version: '3.9'
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # MySQL — primary database
+  # ---------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.4
+    container_name: wellness-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: wellness
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --max-connections=200
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - wellness-network
+
+# ---------------------------------------------------------------------------
+# Named volumes — data persists across container restarts
+# ---------------------------------------------------------------------------
+volumes:
+  mysql_data:
+    driver: local
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
+networks:
+  wellness-network:
+    driver: bridge
