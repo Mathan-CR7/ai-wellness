@@ -21,14 +21,16 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserProvider userProvider, UserMapper userMapper, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserProvider userProvider, UserMapper userMapper, PasswordEncoder passwordEncoder)
+    {
         this.userProvider = userProvider;
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Override
-    public UserProfileResponse registerUser(UserRegistrationRequest request) {
+    public UserProfileResponse registerUser(UserRegistrationRequest request)
+    {
         if (userProvider.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("User with email " + request.getEmail() + " already exists.");
         }
@@ -63,14 +65,14 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
         user.setFullName(request.getFullName());
-        if (request.getWeightKg() != null) {
+        if (request.getWeightKg() != null)
+        {
             user.setWeightKg(request.getWeightKg());
         }
         if (request.getHeightCm() != null)
         {
             user.setHeightCm(request.getHeightCm());
         }
-        
         UserEntity updatedUser = userProvider.save(user);
         return userMapper.toProfileResponse(updatedUser);
     }

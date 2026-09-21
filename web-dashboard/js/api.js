@@ -65,7 +65,7 @@ const ApiClient = {
   },
 
   async getProfile() {
-    return this.request('/api/users/profile');
+    return this.request('/api/users/me');
   },
 
   async getActivitySummary() {

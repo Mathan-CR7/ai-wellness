@@ -7,28 +7,39 @@ document.addEventListener('DOMContentLoaded', () => {
   AIChatManager.init();
 
   window.addEventListener('auth:authenticated', async () => {
+    // 1. Connect Real-Time STOMP WebSocket FIRST
     try {
-      // 1. Fetch User Profile
-      const profile = await ApiClient.getProfile();
+      WebSocketManager.connect(1);
+    } catch (wsErr) {
+      console.error('Failed to connect WebSocket:', wsErr);
+    }
+
+    // 2. Fetch User Profile
+    try {
+      const profile = await ApiClient.getProfile().catch(() => null);
       const userInfo = document.getElementById('userInfo');
       if (userInfo && profile) {
         userInfo.innerText = `👤 ${profile.fullName} (${profile.email})`;
       }
+    } catch (pErr) {
+      console.warn('Could not fetch user profile:', pErr);
+    }
 
-      // 2. Load Activity Summary Data
+    // 3. Load Activity Summary Data
+    try {
       await loadActivityData();
+    } catch (aErr) {
+      console.warn('Could not fetch activity summary:', aErr);
+    }
 
-      // 3. Connect Real-Time STOMP WebSocket
-      WebSocketManager.connect(1);
-
-      // 4. Fetch initial leaderboard HTTP fallback
+    // 4. Fetch initial leaderboard HTTP fallback
+    try {
       const initialLeaderboard = await ApiClient.getTeamLeaderboard(1).catch(() => null);
       if (initialLeaderboard) {
         WebSocketManager.renderLeaderboard(initialLeaderboard);
       }
-
-    } catch (err) {
-      console.error('Failed to initialize dashboard data:', err);
+    } catch (lErr) {
+      console.warn('Could not fetch initial leaderboard:', lErr);
     }
   });
 
