@@ -74,12 +74,26 @@ const WebSocketManager = {
         return;
       }
       const teamData = await ApiClient.getTeamLeaderboard(this.activeTeamId).catch(() => null);
-      if (teamData) {
+      if (teamData && teamData.rankings) {
         this.renderLeaderboard(teamData);
+        return;
       }
+      this.renderEmptyState();
     } catch (e) {
-      // Silent catch
+      this.renderEmptyState();
     }
+  },
+
+  renderEmptyState() {
+    const tbody = document.getElementById('leaderboardBody');
+    if (!tbody) return;
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+          No activity recorded yet. Sync Health Connect from your phone to start the live leaderboard!
+        </td>
+      </tr>
+    `;
   },
 
   subscribeToChallenge(challengeId = 1) {
