@@ -157,6 +157,4 @@ public class TeamServiceImpl implements TeamService {
 
         teamProvider.removeMember(member.getId());
     }
-
-    
 }
