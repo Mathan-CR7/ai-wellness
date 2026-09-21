@@ -21,14 +21,8 @@ const WebSocketManager = {
     // Disable debug logging for clean console
     this.stompClient.debug = null;
 
-    const headers = {};
-    const token = ApiClient.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
     // 2. Connect via STOMP Protocol
-    this.stompClient.connect(headers, () => {
+    this.stompClient.connect({}, () => {
       if (wsStatusText) wsStatusText.innerText = 'Live WebSocket Connected';
       
       // 3. Subscribe to Real-Time Team Leaderboard Topic
