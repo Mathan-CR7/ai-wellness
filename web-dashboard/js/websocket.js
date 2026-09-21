@@ -6,6 +6,8 @@ const WebSocketManager = {
   stompClient: null,
   activeTeamId: 1,
 
+  pollInterval: null,
+
   connect(teamId = 1) {
     this.activeTeamId = teamId;
     const wsBadge = document.getElementById('wsBadge');
@@ -14,36 +16,70 @@ const WebSocketManager = {
     if (wsBadge) wsBadge.style.display = 'flex';
     if (wsStatusText) wsStatusText.innerText = 'Connecting WebSocket...';
 
-    // 1. Create SockJS socket connection to Spring Boot WebSocket Endpoint
-    const socket = new SockJS(`${API_BASE_URL}/ws`);
-    this.stompClient = Stomp.over(socket);
-    
-    // Enable debug logging for connection troubleshooting
-    this.stompClient.debug = (msg) => console.log('[STOMP]', msg);
+    // 1. Fetch initial HTTP REST Leaderboard immediately so UI is never empty
+    this.fetchRestLeaderboard();
 
-    // 2. Connect via STOMP Protocol
-    this.stompClient.connect({}, () => {
-      if (wsStatusText) wsStatusText.innerText = 'Live WebSocket Connected';
-      
-      // 3. Subscribe to Real-Time Team Leaderboard Topic
-      this.stompClient.subscribe(`/topic/leaderboard/${this.activeTeamId}`, (message) => {
-        try {
-          const leaderboardData = JSON.parse(message.body);
-          console.log('[WebSocket STOMP] Real-Time Team Rank Broadcast Received:', leaderboardData);
-          this.renderLeaderboard(leaderboardData);
-          window.dispatchEvent(new Event('activity:updated'));
-        } catch (e) {
-          console.error('[WebSocket STOMP] Failed to parse team payload:', e);
-        }
+    // 2. Start REST polling fallback (every 5 seconds) until WebSocket confirms live connection
+    if (!this.pollInterval) {
+      this.pollInterval = setInterval(() => this.fetchRestLeaderboard(), 5000);
+    }
+
+    try {
+      // 3. Create SockJS connection with explicit transports
+      const socket = new SockJS(`${API_BASE_URL}/ws`, null, {
+        transports: ['xhr-streaming', 'xhr-polling', 'websocket']
       });
+      this.stompClient = Stomp.over(socket);
+      this.stompClient.debug = (msg) => console.log('[STOMP]', msg);
 
-      // 4. Subscribe to Real-Time Challenge Leaderboard Topic
-      this.subscribeToChallenge(1);
-    }, (error) => {
-      console.warn('[WebSocket STOMP] Disconnected:', error);
-      if (wsStatusText) wsStatusText.innerText = 'WebSocket Reconnecting...';
-      setTimeout(() => this.connect(this.activeTeamId), 5000);
-    });
+      // 4. Connect via STOMP Protocol
+      this.stompClient.connect({}, () => {
+        if (wsStatusText) wsStatusText.innerText = 'Live WebSocket Connected';
+        
+        // Stop REST polling fallback since WebSocket is live
+        if (this.pollInterval) {
+          clearInterval(this.pollInterval);
+          this.pollInterval = null;
+        }
+
+        // Subscribe to Team Leaderboard Topic
+        this.stompClient.subscribe(`/topic/leaderboard/${this.activeTeamId}`, (message) => {
+          try {
+            const leaderboardData = JSON.parse(message.body);
+            this.renderLeaderboard(leaderboardData);
+            window.dispatchEvent(new Event('activity:updated'));
+          } catch (e) {
+            console.error('[WebSocket STOMP] Failed to parse team payload:', e);
+          }
+        });
+
+        // Subscribe to Challenge Leaderboard Topic
+        this.subscribeToChallenge(1);
+      }, (error) => {
+        console.warn('[WebSocket STOMP] Disconnected, using REST fallback:', error);
+        if (wsStatusText) wsStatusText.innerText = 'Live REST Streaming Active';
+        setTimeout(() => this.connect(this.activeTeamId), 10000);
+      });
+    } catch (e) {
+      console.warn('[WebSocket Init] Falling back to REST stream:', e);
+      if (wsStatusText) wsStatusText.innerText = 'Live REST Streaming Active';
+    }
+  },
+
+  async fetchRestLeaderboard() {
+    try {
+      const challengeData = await ApiClient.request('/api/challenges/1/leaderboard').catch(() => null);
+      if (challengeData && challengeData.leaderboard) {
+        this.renderChallengeLeaderboard(challengeData);
+        return;
+      }
+      const teamData = await ApiClient.getTeamLeaderboard(this.activeTeamId).catch(() => null);
+      if (teamData) {
+        this.renderLeaderboard(teamData);
+      }
+    } catch (e) {
+      // Silent catch
+    }
   },
 
   subscribeToChallenge(challengeId = 1) {
