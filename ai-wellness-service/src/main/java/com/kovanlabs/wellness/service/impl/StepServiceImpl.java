@@ -85,7 +85,8 @@ public class StepServiceImpl implements StepService {
 
     @Override
     @Transactional(readOnly = true)
-    public DailyStepResponse getStepsForDate(Long userId, LocalDate date) {
+    public DailyStepResponse getStepsForDate(Long userId, LocalDate date)
+        {
         if (userProvider.findById(userId).isEmpty()) {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }

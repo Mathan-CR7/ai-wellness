@@ -68,16 +68,20 @@ const WebSocketManager = {
 
   async fetchRestLeaderboard() {
     try {
-      const challengeData = await ApiClient.request('/api/challenges/1/leaderboard').catch(() => null);
-      if (challengeData && challengeData.leaderboard) {
-        this.renderChallengeLeaderboard(challengeData);
-        return;
-      }
+      // Check Team Leaderboard FIRST
       const teamData = await ApiClient.getTeamLeaderboard(this.activeTeamId).catch(() => null);
-      if (teamData && teamData.rankings) {
+      if (teamData && teamData.rankings && teamData.rankings.length > 0) {
         this.renderLeaderboard(teamData);
         return;
       }
+
+      // Check Challenge Leaderboard if team rankings are empty
+      const challengeData = await ApiClient.request('/api/challenges/1/leaderboard').catch(() => null);
+      if (challengeData && challengeData.leaderboard && challengeData.leaderboard.length > 0) {
+        this.renderChallengeLeaderboard(challengeData);
+        return;
+      }
+
       this.renderEmptyState();
     } catch (e) {
       this.renderEmptyState();
@@ -114,14 +118,8 @@ const WebSocketManager = {
     const tbody = document.getElementById('leaderboardBody');
     if (!tbody || !data || !data.leaderboard) return;
 
-    if (data.leaderboard.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">
-            No challenge activity recorded yet. Sync Health Connect steps to get on the leaderboard!
-          </td>
-        </tr>
-      `;
+    if (!data.leaderboard || data.leaderboard.length === 0) {
+      this.renderEmptyState();
       return;
     }
 
@@ -158,14 +156,8 @@ const WebSocketManager = {
     const tbody = document.getElementById('leaderboardBody');
     if (!tbody || !data || !data.rankings) return;
 
-    if (data.rankings.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">
-            No team activity recorded yet. Sync Health Connect from your phone to get on the leaderboard!
-          </td>
-        </tr>
-      `;
+    if (!data.rankings || data.rankings.length === 0) {
+      this.renderEmptyState();
       return;
     }
 

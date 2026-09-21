@@ -34,7 +34,6 @@ import java.util.concurrent.TimeoutException;
 public class AiServiceImpl implements AiService {
 
     private static final Logger log = LoggerFactory.getLogger(AiServiceImpl.class);
-
     private final AIConversationRepository conversationRepository;
     private final AIMessageRepository messageRepository;
     private final AppProperties appProperties;
@@ -64,7 +63,8 @@ public class AiServiceImpl implements AiService {
             if (!conversation.getUserId().equals(userId)) {
                 throw new UnauthorizedException("Unauthorized access to conversation.");
             }
-        } else {
+        }
+        else {
             String title = request.getPrompt().length() > 30
                     ? request.getPrompt().substring(0, 30) + "..."
                     : request.getPrompt();
@@ -74,17 +74,14 @@ public class AiServiceImpl implements AiService {
                     .build());
         }
 
-        // ── Persist user message ──────────────────────────────────────────────
         messageRepository.save(AIMessageEntity.builder()
                 .conversationId(conversation.getId())
                 .sender(MessageSender.USER)
                 .content(request.getPrompt())
                 .build());
 
-        // ── Call Gemini — no fallback ────────────────────────────────────────
         String aiTextResponse = callGemini(userId, request.getPrompt());
 
-        // ── Persist AI message ────────────────────────────────────────────────
         AIMessageEntity aiMsg = messageRepository.save(AIMessageEntity.builder()
                 .conversationId(conversation.getId())
                 .sender(MessageSender.AI)
@@ -117,16 +114,6 @@ public class AiServiceImpl implements AiService {
         return messageRepository.findByConversationIdOrderByTimestampAsc(conversationId);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Private helpers
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Invokes the Gemini model via Spring AI ChatClient.
-     *
-     * <p>No fallback is applied. Timeout → {@link AiTimeoutException} (HTTP 504).
-     * Any other error → {@link AiServiceException} (HTTP 503).
-     */
     private String callGemini(Long userId, String prompt) {
         try {
             String response = chatClientBuilder.build()
@@ -146,11 +133,9 @@ public class AiServiceImpl implements AiService {
             return response;
 
         } catch (AiServiceException | AiTimeoutException rethrow) {
-            // Already classified — rethrow as-is
             throw rethrow;
 
         } catch (Exception e) {
-            // Classify timeout vs. generic unavailability
             if (isTimeoutCause(e)) {
                 log.error("Gemini request timed out for userId={}: {}", userId, e.getMessage());
                 throw new AiTimeoutException(
@@ -162,9 +147,6 @@ public class AiServiceImpl implements AiService {
         }
     }
 
-    /**
-     * Returns {@code true} if the exception chain contains a timeout root cause.
-     */
     private boolean isTimeoutCause(Throwable e) {
         Throwable cause = e;
         while (cause != null) {

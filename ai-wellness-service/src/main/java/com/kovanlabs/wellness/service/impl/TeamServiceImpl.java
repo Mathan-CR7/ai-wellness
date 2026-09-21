@@ -136,7 +136,7 @@ public class TeamServiceImpl implements TeamService
                 })
                 .collect(Collectors.toList());
     }
-    
+
     @Override
     public void removeMember(Long teamId, Long requesterId, Long memberId) {
         TeamEntity team = teamProvider.findTeamById(teamId)

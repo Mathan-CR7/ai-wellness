@@ -2,7 +2,8 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:background="#F8F9FA">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -10,117 +11,256 @@
         android:orientation="vertical"
         android:padding="24dp">
 
+        <!-- Header / Logo Area -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Wellness Health Connect 20s Sync"
-            android:textSize="22sp"
+            android:text="AI Wellness Tracker"
+            android:textSize="24sp"
             android:textStyle="bold"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- Backend Server Configuration -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Backend Server Base URL:"
-            android:textStyle="bold"
+            android:textColor="#1B5E20"
+            android:gravity="center_horizontal"
+            android:layout_marginTop="16dp"
             android:layout_marginBottom="4dp"/>
 
-        <LinearLayout
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
+            android:text="Real-Time Sensor Step Sync"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:gravity="center_horizontal"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- STATE 1: LOGIN CONTAINER -->
+        <LinearLayout
+            android:id="@+id/loginContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:elevation="4dp"
+            android:padding="20dp"
+            android:visibility="visible">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Account Login"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Email Address"
+                android:textSize="12sp"
+                android:textColor="#555555"
+                android:layout_marginBottom="4dp"/>
 
             <EditText
-                android:id="@+id/backendUrlEditText"
-                android:layout_width="0dp"
+                android:id="@+id/emailEditText"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="http://10.0.2.2:8080/ or http://192.168.1.x:8080/"
-                android:inputType="textUri"
-                android:textSize="14sp"
-                android:layout_marginEnd="8dp"/>
+                android:hint="e.g. mathan@wellness.app"
+                android:inputType="textEmailAddress"
+                android:padding="12dp"
+                android:background="@android:drawable/editbox_background"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Password"
+                android:textSize="12sp"
+                android:textColor="#555555"
+                android:layout_marginBottom="4dp"/>
+
+            <EditText
+                android:id="@+id/passwordEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Password"
+                android:inputType="textPassword"
+                android:padding="12dp"
+                android:background="@android:drawable/editbox_background"
+                android:layout_marginBottom="24dp"/>
 
             <Button
-                android:id="@+id/saveUrlButton"
-                android:layout_width="wrap_content"
+                android:id="@+id/loginButton"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Save URL"/>
+                android:text="SIGN IN"
+                android:textStyle="bold"
+                android:backgroundTint="#2E7D32"
+                android:textColor="#FFFFFF"
+                android:padding="14dp"/>
+
         </LinearLayout>
 
-        <!-- Auth Inputs -->
-        <EditText
-            android:id="@+id/emailEditText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Email (user1@example.com)"
-            android:inputType="textEmailAddress"
-            android:layout_marginBottom="8dp"/>
-
-        <EditText
-            android:id="@+id/passwordEditText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Password"
-            android:inputType="textPassword"
-            android:layout_marginBottom="16dp"/>
-
-        <Button
-            android:id="@+id/loginButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Login &amp; Authenticate Token"
-            android:layout_marginBottom="24dp"/>
-
-        <!-- Status & Data -->
-        <TextView
-            android:id="@+id/statusTextView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Status: Checking Health Connect..."
-            android:textSize="14sp"
-            android:layout_marginBottom="12dp"/>
-
-        <TextView
-            android:id="@+id/stepCountTextView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="0 steps"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:textColor="#2E7D32"
-            android:layout_marginBottom="24dp"/>
-
-        <Button
-            android:id="@+id/permissionButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Grant Health Connect Permissions"
-            android:enabled="false"
-            android:layout_marginBottom="12dp"/>
-
+        <!-- STATE 2: DASHBOARD CONTAINER -->
         <LinearLayout
+            android:id="@+id/dashboardContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="vertical"
+            android:visibility="gone">
 
-            <Button
-                android:id="@+id/syncButton"
-                android:layout_width="0dp"
+            <!-- User Header Bar -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Start 20s Sync"
-                android:enabled="false"
-                android:layout_marginEnd="8dp"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
 
-            <Button
-                android:id="@+id/stopSyncButton"
-                android:layout_width="0dp"
+                <TextView
+                    android:id="@+id/userEmailTextView"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Logged in as user"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#333333"/>
+
+                <Button
+                    android:id="@+id/logoutButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Logout"
+                    android:textSize="12sp"
+                    android:backgroundTint="#D32F2F"
+                    android:textColor="#FFFFFF"/>
+            </LinearLayout>
+
+            <!-- Main Step Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Stop Sync"
-                android:enabled="false"/>
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="#E8F5E9"
+                android:padding="28dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TODAY'S STEPS"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="#2E7D32"
+                    android:letterSpacing="0.1"/>
+
+                <TextView
+                    android:id="@+id/stepCountTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textSize="44sp"
+                    android:textStyle="bold"
+                    android:textColor="#1B5E20"
+                    android:layout_marginVertical="8dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Health Connect Real-Time Sensor"
+                    android:textSize="12sp"
+                    android:textColor="#4CAF50"/>
+            </LinearLayout>
+
+            <!-- Sub Metrics Row (Distance & Calories) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="20dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="#FFFFFF"
+                    android:elevation="2dp"
+                    android:padding="16dp"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="DISTANCE"
+                        android:textSize="11sp"
+                        android:textColor="#888888"/>
+
+                    <TextView
+                        android:id="@+id/distanceTextView"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0 km"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="#333333"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="#FFFFFF"
+                    android:elevation="2dp"
+                    android:padding="16dp"
+                    android:layout_marginStart="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="CALORIES"
+                        android:textSize="11sp"
+                        android:textColor="#888888"/>
+
+                    <TextView
+                        android:id="@+id/caloriesTextView"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 kcal"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="#333333"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Permission Grant Button (if needed) -->
+            <Button
+                android:id="@+id/permissionButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Grant Health Connect Permissions"
+                android:backgroundTint="#F57C00"
+                android:textColor="#FFFFFF"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Status Indicator -->
+            <TextView
+                android:id="@+id/statusTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Status: Syncing with cloud automatically..."
+                android:textSize="13sp"
+                android:textColor="#666666"
+                android:gravity="center_horizontal"/>
+
         </LinearLayout>
 
     </LinearLayout>

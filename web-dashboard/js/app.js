@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const profile = await ApiClient.getProfile().catch(() => null);
       const userInfo = document.getElementById('userInfo');
       if (userInfo && profile) {
-        userInfo.innerText = `👤 ${profile.fullName} (${profile.email})`;
+        userInfo.innerText = `👤 ${profile.fullName || 'User'} (${profile.email})`;
       }
     } catch (pErr) {
       console.warn('Could not fetch user profile:', pErr);
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. Fetch initial leaderboard HTTP fallback
     try {
       const initialLeaderboard = await ApiClient.getTeamLeaderboard(1).catch(() => null);
-      if (initialLeaderboard) {
+      if (initialLeaderboard && initialLeaderboard.rankings && initialLeaderboard.rankings.length > 0) {
         WebSocketManager.renderLeaderboard(initialLeaderboard);
       }
     } catch (lErr) {
@@ -51,11 +51,22 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadActivityData() {
   try {
     const summary = await ApiClient.getActivitySummary().catch(() => null);
-    if (!summary) return;
+    const todayStepsRes = await ApiClient.request('/api/steps/today').catch(() => null);
 
-    const steps = summary.totalSteps || 0;
-    const distanceMeters = summary.totalDistanceMeters || 0;
-    const calories = Math.round(summary.totalCaloriesBurned || 0);
+    let steps = 0;
+    if (todayStepsRes && todayStepsRes.steps && todayStepsRes.steps > 0) {
+      steps = todayStepsRes.steps;
+    } else if (summary && summary.totalSteps && summary.totalSteps > 0) {
+      steps = summary.totalSteps;
+    }
+
+    let distanceMeters = (summary && summary.totalDistanceMeters && summary.totalDistanceMeters > 0) 
+      ? summary.totalDistanceMeters 
+      : (steps * 0.66); // 0.66m per step estimate
+
+    let calories = (summary && summary.totalCaloriesBurned && summary.totalCaloriesBurned > 0) 
+      ? Math.round(summary.totalCaloriesBurned) 
+      : Math.round(steps * 0.04); // 0.04 kcal per step estimate
 
     // Update Step Number Display
     const stepDisplay = document.getElementById('stepDisplay');
@@ -87,9 +98,15 @@ async function loadActivityData() {
     // Update Source Device if available
     const myActivities = await ApiClient.getMyActivities().catch(() => []);
     const sourceDisplay = document.getElementById('sourceDisplay');
-    if (sourceDisplay && myActivities.length > 0) {
-      const latest = myActivities[0];
-      sourceDisplay.innerText = `${latest.sourceDevice || 'Android Health Connect'} (${new Date(latest.syncedAt).toLocaleTimeString()})`;
+    if (sourceDisplay) {
+      if (myActivities.length > 0 && myActivities[0].sourceDevice) {
+        const latest = myActivities[0];
+        sourceDisplay.innerText = `${latest.sourceDevice} (${new Date(latest.syncedAt).toLocaleTimeString()})`;
+      } else if (steps > 0) {
+        sourceDisplay.innerText = 'Android Health Connect (Live Sync)';
+      } else {
+        sourceDisplay.innerText = 'Health Connect (Waiting)';
+      }
     }
 
   } catch (err) {

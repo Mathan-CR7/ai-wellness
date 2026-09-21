@@ -36,6 +36,11 @@ public class JpaUserProvider implements UserProvider {
     }
 
     @Override
+    public java.util.List<UserEntity> findAll() {
+        return userRepository.findAll();
+    }
+
+    @Override
     public void deleteById(Long id) {
         userRepository.deleteById(id);
     }

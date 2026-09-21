@@ -33,7 +33,7 @@ class ActivitySyncWorker(
             .build()
 
         val baseUrl = appContext.getSharedPreferences("wellness_config", Context.MODE_PRIVATE)
-            .getString("backend_url", "http://10.0.2.2:8080/") ?: "http://10.0.2.2:8080/"
+            .getString("backend_url", "https://ai-wellness-jt1d.onrender.com/") ?: "https://ai-wellness-jt1d.onrender.com/"
 
         Retrofit.Builder()
             .baseUrl(baseUrl)

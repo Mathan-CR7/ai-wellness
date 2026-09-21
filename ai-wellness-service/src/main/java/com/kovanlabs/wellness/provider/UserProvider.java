@@ -17,5 +17,7 @@ public interface UserProvider {
 
     boolean existsByEmail(String email);
 
+    java.util.List<UserEntity> findAll();
+
     void deleteById(Long id);
 }

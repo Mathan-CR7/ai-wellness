@@ -180,7 +180,7 @@ class HealthConnectSyncService : Service() {
             .build()
 
         val baseUrl = getSharedPreferences("wellness_config", Context.MODE_PRIVATE)
-            .getString("backend_url", "http://192.168.0.135:8080/") ?: "http://192.168.0.135:8080/"
+            .getString("backend_url", "https://ai-wellness-jt1d.onrender.com/") ?: "https://ai-wellness-jt1d.onrender.com/"
 
         apiService = Retrofit.Builder()
             .baseUrl(baseUrl)
