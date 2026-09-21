@@ -18,8 +18,8 @@ const WebSocketManager = {
     const socket = new SockJS(`${API_BASE_URL}/ws`);
     this.stompClient = Stomp.over(socket);
     
-    // Disable debug logging for clean console
-    this.stompClient.debug = null;
+    // Enable debug logging for connection troubleshooting
+    this.stompClient.debug = (msg) => console.log('[STOMP]', msg);
 
     // 2. Connect via STOMP Protocol
     this.stompClient.connect({}, () => {
