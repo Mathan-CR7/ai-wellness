@@ -123,7 +123,8 @@ public class TeamServiceImpl implements TeamService
 
     @Override
     @Transactional(readOnly = true)
-    public List<TeamResponse> getUserTeams(Long userId) {
+    public List<TeamResponse> getUserTeams(Long userId)
+    {
         List<TeamMemberEntity> memberships = teamProvider.findTeamsByUserId(userId);
         return memberships.stream()
                 .map(m -> teamProvider.findTeamById(m.getTeamId()))
@@ -138,7 +139,8 @@ public class TeamServiceImpl implements TeamService
     }
 
     @Override
-    public void removeMember(Long teamId, Long requesterId, Long memberId) {
+    public void removeMember(Long teamId, Long requesterId, Long memberId)
+    {
         TeamEntity team = teamProvider.findTeamById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found with id: " + teamId));
 

@@ -57,7 +57,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             }
         }
 
-        // If team has no registered members, populate with all active users so leaderboard is never empty!
         if (targetUsers.isEmpty()) {
             targetUsers = userProvider.findAll();
         }
@@ -71,17 +70,16 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                     .map(DailyStepEntity::getSteps)
                     .orElse(0L);
 
-            // Combine Health Connect daily step sync with activity records
             long totalSteps = Math.max(activitySteps != null ? activitySteps : 0L, dailySteps != null ? dailySteps : 0L);
 
             Double distance = activityProvider.sumDistance(user.getId(), startTime, endTime);
             if (distance == null || distance == 0.0) {
-                distance = totalSteps * 0.66; // estimated meters
+                distance = totalSteps * 0.66;
             }
 
             Double calories = activityProvider.sumCalories(user.getId(), startTime, endTime);
             if (calories == null || calories == 0.0) {
-                calories = totalSteps * 0.04; // estimated kcal
+                calories = totalSteps * 0.04;
             }
 
             entries.add(LeaderboardEntry.builder()

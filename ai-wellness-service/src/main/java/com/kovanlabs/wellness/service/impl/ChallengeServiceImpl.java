@@ -228,10 +228,8 @@ public class ChallengeServiceImpl implements ChallengeService {
                     .build());
         }
 
-        // Sort descending by total steps
         entries.sort((a, b) -> Long.compare(b.getTotalSteps(), a.getTotalSteps()));
 
-        // Assign ranks
         for (int i = 0; i < entries.size(); i++) {
             entries.get(i).setRank(i + 1);
         }
@@ -253,7 +251,8 @@ public class ChallengeServiceImpl implements ChallengeService {
         }
     }
 
-    private void recalculateAndBroadcastChallengeLeaderboard(Long challengeId) {
+    private void recalculateAndBroadcastChallengeLeaderboard(Long challengeId)
+    {
         try {
             ChallengeLeaderboardResponse leaderboard = getChallengeLeaderboard(challengeId);
             leaderboardPublisher.publishChallengeLeaderboardUpdate(challengeId, leaderboard);
@@ -261,6 +260,7 @@ public class ChallengeServiceImpl implements ChallengeService {
             log.warn("Failed to recalculate and broadcast leaderboard for challengeId={}: {}", challengeId, e.getMessage(), e);
         }
     }
+
 
     private ChallengeMemberResponse toMemberResponse(ChallengeMemberEntity entity, UserEntity user) {
         return ChallengeMemberResponse.builder()
