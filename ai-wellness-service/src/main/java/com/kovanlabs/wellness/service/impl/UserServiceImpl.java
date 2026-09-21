@@ -66,10 +66,11 @@ public class UserServiceImpl implements UserService {
         if (request.getWeightKg() != null) {
             user.setWeightKg(request.getWeightKg());
         }
-        if (request.getHeightCm() != null) {
+        if (request.getHeightCm() != null)
+        {
             user.setHeightCm(request.getHeightCm());
         }
-
+        
         UserEntity updatedUser = userProvider.save(user);
         return userMapper.toProfileResponse(updatedUser);
     }

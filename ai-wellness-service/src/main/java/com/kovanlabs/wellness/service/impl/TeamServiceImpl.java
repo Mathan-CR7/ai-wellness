@@ -22,8 +22,8 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
-public class TeamServiceImpl implements TeamService {
-
+public class TeamServiceImpl implements TeamService
+{
     private final TeamProvider teamProvider;
     private final UserProvider userProvider;
     private final TeamMapper teamMapper;
@@ -54,7 +54,6 @@ public class TeamServiceImpl implements TeamService {
 
         TeamEntity savedTeam = teamProvider.saveTeam(team);
 
-        // Automatically add owner as team leader
         TeamMemberEntity ownerMember = TeamMemberEntity.builder()
                 .teamId(savedTeam.getId())
                 .userId(ownerId)
@@ -143,7 +142,6 @@ public class TeamServiceImpl implements TeamService {
         TeamEntity team = teamProvider.findTeamById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found with id: " + teamId));
 
-        // Prevent owner from removing themselves — would create an ownerless team
         if (team.getOwnerId().equals(memberId)) {
             throw new IllegalArgumentException("Team owner cannot remove themselves. Transfer ownership first.");
         }

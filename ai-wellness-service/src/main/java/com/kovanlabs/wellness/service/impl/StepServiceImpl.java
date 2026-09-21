@@ -47,7 +47,6 @@ public class StepServiceImpl implements StepService {
         LocalDate targetDate = request.getDate() != null ? request.getDate() : LocalDate.now(ZoneId.systemDefault());
         Long steps = request.getSteps();
 
-        // Idempotent upsert strategy — update existing record for (userId, date) or insert new
         Optional<DailyStepEntity> existingOpt = dailyStepRepository.findByUserIdAndDate(userId, targetDate);
 
         DailyStepEntity entity;
@@ -68,7 +67,6 @@ public class StepServiceImpl implements StepService {
 
         DailyStepEntity savedEntity = dailyStepRepository.save(entity);
 
-        // Recalculate and broadcast live STOMP WebSocket updates for active challenges the user is participating in
         try {
             challengeService.recalculateAndBroadcastLeaderboards(userId);
         } catch (Exception e) {

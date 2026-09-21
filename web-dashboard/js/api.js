@@ -17,20 +17,23 @@ const ApiClient = {
     localStorage.removeItem('wellness_token');
   },
 
-  getHeaders() {
+  getHeaders(skipAuth = false) {
     const headers = {
       'Content-Type': 'application/json'
     };
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (!skipAuth) {
+      const token = this.getToken();
+      if (token && token !== 'undefined' && token !== 'null') {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
     return headers;
   },
 
-  async request(endpoint, options = {}) {
+  async request(endpoint, options = {}, skipAuth = false) {
+    const defaultHeaders = this.getHeaders(skipAuth);
     options.headers = {
-      ...this.getHeaders(),
+      ...defaultHeaders,
       ...(options.headers || {})
     };
 
@@ -52,8 +55,9 @@ const ApiClient = {
   async login(email, password) {
     const res = await this.request('/api/auth/login', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
-    });
+    }, true);
     if (res.token) {
       this.setToken(res.token);
     }
