@@ -138,10 +138,10 @@ public class ChallengeServiceImpl implements ChallengeService {
         ChallengeEntity challenge = challengeProvider.findById(challengeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Challenge not found with id: " + challengeId));
 
-        if (!challenge.getCreatedBy().equals(requesterId)) {
+        if (!challenge.getCreatedBy().equals(requesterId))
+        {
             throw new UnauthorizedException("Only challenge creator can delete the challenge.");
         }
-
         challengeProvider.deleteById(challengeId);
     }
 
@@ -183,7 +183,8 @@ public class ChallengeServiceImpl implements ChallengeService {
     @Override
     @Transactional(readOnly = true)
     public List<ChallengeMemberResponse> getChallengeMembers(Long challengeId) {
-        if (challengeProvider.findById(challengeId).isEmpty()) {
+        if (challengeProvider.findById(challengeId).isEmpty())
+        {
             throw new ResourceNotFoundException("Challenge not found with id: " + challengeId);
         }
 

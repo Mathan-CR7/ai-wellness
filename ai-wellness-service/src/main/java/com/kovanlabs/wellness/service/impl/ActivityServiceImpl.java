@@ -13,6 +13,7 @@ import com.kovanlabs.wellness.mapper.ActivityMapper;
 import com.kovanlabs.wellness.provider.ActivityProvider;
 import com.kovanlabs.wellness.provider.TeamProvider;
 import com.kovanlabs.wellness.provider.UserProvider;
+import com.kovanlabs.wellness.repository.ActivityRepository;
 import com.kovanlabs.wellness.repository.DailyStepRepository;
 import com.kovanlabs.wellness.service.ActivityService;
 import com.kovanlabs.wellness.service.ActivityTrendCalculator;
@@ -46,6 +47,7 @@ public class ActivityServiceImpl implements ActivityService {
     private final LeaderboardService leaderboardService;
     private final TeamProvider teamProvider;
     private final DailyStepRepository dailyStepRepository;
+    private final ActivityRepository activityRepository;
 
     public ActivityServiceImpl(
             ActivityProvider activityProvider,
@@ -56,7 +58,8 @@ public class ActivityServiceImpl implements ActivityService {
             WebSocketLeaderboardPublisher leaderboardPublisher,
             LeaderboardService leaderboardService,
             TeamProvider teamProvider,
-            DailyStepRepository dailyStepRepository
+            DailyStepRepository dailyStepRepository,
+            ActivityRepository activityRepository
     ) {
         this.activityProvider = activityProvider;
         this.userProvider = userProvider;
@@ -67,6 +70,7 @@ public class ActivityServiceImpl implements ActivityService {
         this.leaderboardService = leaderboardService;
         this.teamProvider = teamProvider;
         this.dailyStepRepository = dailyStepRepository;
+        this.activityRepository = activityRepository;
     }
 
     @Override
@@ -94,12 +98,19 @@ public class ActivityServiceImpl implements ActivityService {
         }
         dailyStepRepository.save(stepEntity);
 
-        // 2. Save Activity record
+        // 2. Purge old duplicate 10s sync records for this user to prevent metric accumulation
+        try {
+            activityRepository.deleteByUserId(userId);
+        } catch (Exception e) {
+            log.warn("Could not purge duplicate activity records for userId={}: {}", userId, e.getMessage());
+        }
+
+        // 3. Save clean single active Activity record
         ActivityEntity entity = activityMapper.toEntity(request);
         entity.setUserId(userId);
         ActivityEntity savedActivity = activityProvider.save(entity);
 
-        // 3. Broadcast real-time WebSocket leaderboard updates to Team #1 & user's teams
+        // 4. Broadcast real-time WebSocket leaderboard updates to Team #1 & user's teams
         try {
             Instant now = Instant.now();
             Instant weekAgo = now.minus(7, ChronoUnit.DAYS);

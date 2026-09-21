@@ -52,4 +52,8 @@ public interface ActivityRepository extends JpaRepository<ActivityEntity, Long> 
             @Param("userId") Long userId,
             @Param("startTime") Instant startTime,
             @Param("endTime") Instant endTime);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM ActivityEntity a WHERE a.userId = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
 }
