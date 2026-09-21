@@ -22,13 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-/**
- * AI service implementation backed by Google Gemini via Spring AI.
- *
- * <p><b>No fallback logic.</b> If Gemini times out, an {@link AiTimeoutException}
- * (HTTP 504) is thrown. If Gemini returns any other error, an {@link AiServiceException}
- * (HTTP 503) is thrown. The real error state always reaches the client.
- */
 @Service
 @Transactional
 public class AiServiceImpl implements AiService {
@@ -53,8 +46,6 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public AIChatResponse processChat(Long userId, AIChatRequest request) {
-
-        // ── Resolve or create conversation ────────────────────────────────────
         AIConversationEntity conversation;
         if (request.getConversationId() != null) {
             conversation = conversationRepository.findById(request.getConversationId())
