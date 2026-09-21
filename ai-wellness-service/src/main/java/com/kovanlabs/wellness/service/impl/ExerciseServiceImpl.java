@@ -59,7 +59,8 @@ public class ExerciseServiceImpl implements ExerciseService {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
-        if (start != null && end != null && start.isAfter(end)) {
+        if (start != null && end != null && start.isAfter(end))
+        {
             throw new IllegalArgumentException("Start time must be before end time.");
         }
 
