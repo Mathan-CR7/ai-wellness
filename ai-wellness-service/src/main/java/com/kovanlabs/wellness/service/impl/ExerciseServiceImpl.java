@@ -22,7 +22,8 @@ public class ExerciseServiceImpl implements ExerciseService {
     private final UserProvider userProvider;
     private final ExerciseMapper exerciseMapper;
 
-    public ExerciseServiceImpl(ExerciseProvider exerciseProvider, UserProvider userProvider, ExerciseMapper exerciseMapper) {
+    public ExerciseServiceImpl(ExerciseProvider exerciseProvider, UserProvider userProvider, ExerciseMapper exerciseMapper)
+    {
         this.exerciseProvider = exerciseProvider;
         this.userProvider = userProvider;
         this.exerciseMapper = exerciseMapper;
@@ -43,7 +44,8 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ExerciseResponse> getUserExercises(Long userId) {
+    public List<ExerciseResponse> getUserExercises(Long userId)
+    {
         if (userProvider.findById(userId).isEmpty()) {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
