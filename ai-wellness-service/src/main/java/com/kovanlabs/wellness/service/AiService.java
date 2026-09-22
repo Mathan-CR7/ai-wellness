@@ -14,4 +14,6 @@ public interface AiService {
     List<AIConversationEntity> getUserConversations(Long userId);
 
     List<AIMessageEntity> getConversationMessages(Long conversationId, Long userId);
+
+    String generateInactivitySuggestion(Long userId, String fullName, long currentSteps, long inactivityMinutes, long targetGoal);
 }

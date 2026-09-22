@@ -7,6 +7,7 @@ import com.kovanlabs.wellness.exception.ResourceNotFoundException;
 import com.kovanlabs.wellness.provider.UserProvider;
 import com.kovanlabs.wellness.repository.DailyStepRepository;
 import com.kovanlabs.wellness.service.ChallengeService;
+import com.kovanlabs.wellness.service.InactivityDetectionService;
 import com.kovanlabs.wellness.service.StepService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,15 +28,18 @@ public class StepServiceImpl implements StepService {
     private final DailyStepRepository dailyStepRepository;
     private final UserProvider userProvider;
     private final ChallengeService challengeService;
+    private final InactivityDetectionService inactivityDetectionService;
 
     public StepServiceImpl(
             DailyStepRepository dailyStepRepository,
             UserProvider userProvider,
-            @Lazy ChallengeService challengeService
+            @Lazy ChallengeService challengeService,
+            @Lazy InactivityDetectionService inactivityDetectionService
     ) {
         this.dailyStepRepository = dailyStepRepository;
         this.userProvider = userProvider;
         this.challengeService = challengeService;
+        this.inactivityDetectionService = inactivityDetectionService;
     }
 
     @Override
@@ -67,6 +71,13 @@ public class StepServiceImpl implements StepService {
 
         DailyStepEntity savedEntity = dailyStepRepository.save(entity);
 
+        // Register step sync with InactivityDetectionService to evaluate physical movement and reset inactivity state
+        try {
+            inactivityDetectionService.registerStepSync(userId, steps);
+        } catch (Exception e) {
+            log.warn("Failed to register step sync with InactivityDetectionService for userId={}: {}", userId, e.getMessage());
+        }
+
         try {
             challengeService.recalculateAndBroadcastLeaderboards(userId);
         } catch (Exception e) {
@@ -85,8 +96,7 @@ public class StepServiceImpl implements StepService {
 
     @Override
     @Transactional(readOnly = true)
-    public DailyStepResponse getStepsForDate(Long userId, LocalDate date)
-        {
+    public DailyStepResponse getStepsForDate(Long userId, LocalDate date) {
         if (userProvider.findById(userId).isEmpty()) {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }

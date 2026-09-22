@@ -86,7 +86,8 @@ public class TeamServiceImpl implements TeamService
         TeamEntity team = teamProvider.findTeamByInviteCode(inviteCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid team invite code: " + inviteCode));
 
-        if (teamProvider.isMember(team.getId(), userId)) {
+        if (teamProvider.isMember(team.getId(), userId))
+        {
             throw new IllegalArgumentException("User is already a member of team: " + team.getName());
         }
 
@@ -105,8 +106,10 @@ public class TeamServiceImpl implements TeamService
 
     @Override
     @Transactional(readOnly = true)
-    public List<TeamMemberResponse> getTeamMembers(Long teamId) {
-        if (teamProvider.findTeamById(teamId).isEmpty()) {
+    public List<TeamMemberResponse> getTeamMembers(Long teamId)
+    {
+        if (teamProvider.findTeamById(teamId).isEmpty())
+        {
             throw new ResourceNotFoundException("Team not found with id: " + teamId);
         }
 

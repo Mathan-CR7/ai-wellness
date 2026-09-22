@@ -9,9 +9,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="20dp">
 
-        <!-- Header / Logo Area -->
+        <!-- App Branding Header -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -20,19 +20,19 @@
             android:textStyle="bold"
             android:textColor="#1B5E20"
             android:gravity="center_horizontal"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="4dp"/>
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="2dp"/>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Real-Time Sensor Step Sync"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textColor="#666666"
             android:gravity="center_horizontal"
-            android:layout_marginBottom="24dp"/>
+            android:layout_marginBottom="20dp"/>
 
-        <!-- STATE 1: LOGIN CONTAINER -->
+        <!-- STATE 1: LOGIN / REGISTER CONTAINER -->
         <LinearLayout
             android:id="@+id/loginContainer"
             android:layout_width="match_parent"
@@ -44,6 +44,7 @@
             android:visibility="visible">
 
             <TextView
+                android:id="@+id/authTitleTextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Account Login"
@@ -51,6 +52,28 @@
                 android:textStyle="bold"
                 android:textColor="#333333"
                 android:layout_marginBottom="16dp"/>
+
+            <!-- Full Name (Register mode only) -->
+            <TextView
+                android:id="@+id/fullNameLabelTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Full Name"
+                android:textSize="12sp"
+                android:textColor="#555555"
+                android:visibility="gone"
+                android:layout_marginBottom="4dp"/>
+
+            <EditText
+                android:id="@+id/fullNameEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="e.g. Mathan R"
+                android:inputType="textPersonName"
+                android:padding="12dp"
+                android:background="@android:drawable/editbox_background"
+                android:visibility="gone"
+                android:layout_marginBottom="14dp"/>
 
             <TextView
                 android:layout_width="match_parent"
@@ -68,7 +91,7 @@
                 android:inputType="textEmailAddress"
                 android:padding="12dp"
                 android:background="@android:drawable/editbox_background"
-                android:layout_marginBottom="16dp"/>
+                android:layout_marginBottom="14dp"/>
 
             <TextView
                 android:layout_width="match_parent"
@@ -86,7 +109,7 @@
                 android:inputType="textPassword"
                 android:padding="12dp"
                 android:background="@android:drawable/editbox_background"
-                android:layout_marginBottom="24dp"/>
+                android:layout_marginBottom="20dp"/>
 
             <Button
                 android:id="@+id/loginButton"
@@ -96,7 +119,19 @@
                 android:textStyle="bold"
                 android:backgroundTint="#2E7D32"
                 android:textColor="#FFFFFF"
-                android:padding="14dp"/>
+                android:padding="14dp"
+                android:layout_marginBottom="12dp"/>
+
+            <TextView
+                android:id="@+id/toggleRegisterTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Don't have an account? Register here"
+                android:textSize="13sp"
+                android:textColor="#1976D2"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:padding="8dp"/>
 
         </LinearLayout>
 
@@ -136,6 +171,53 @@
                     android:textColor="#FFFFFF"/>
             </LinearLayout>
 
+            <!-- AI WELLNESS INACTIVITY SUGGESTION CARD -->
+            <LinearLayout
+                android:id="@+id/aiSuggestionCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#FFF3E0"
+                android:elevation="3dp"
+                android:padding="16dp"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="6dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="⚡ AI INACTIVITY SUGGESTION"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="#E65100"/>
+
+                    <TextView
+                        android:id="@+id/aiSuggestionTimeTextView"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Just now"
+                        android:textSize="11sp"
+                        android:textColor="#8D6E63"/>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/aiSuggestionTextView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Take a 5-minute walk and try some light shoulder rotations and neck stretches!"
+                    android:textSize="14sp"
+                    android:textColor="#3E2723"
+                    android:lineSpacingExtra="2dp"/>
+            </LinearLayout>
+
             <!-- Main Step Card -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -143,7 +225,7 @@
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="#E8F5E9"
-                android:padding="28dp"
+                android:padding="24dp"
                 android:layout_marginBottom="16dp">
 
                 <TextView
@@ -163,7 +245,7 @@
                     android:textSize="44sp"
                     android:textStyle="bold"
                     android:textColor="#1B5E20"
-                    android:layout_marginVertical="8dp"/>
+                    android:layout_marginVertical="6dp"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -178,7 +260,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginBottom="20dp">
+                android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -188,8 +270,8 @@
                     android:gravity="center"
                     android:background="#FFFFFF"
                     android:elevation="2dp"
-                    android:padding="16dp"
-                    android:layout_marginEnd="8dp">
+                    android:padding="14dp"
+                    android:layout_marginEnd="6dp">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -203,7 +285,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0.0 km"
-                        android:textSize="20sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="#333333"
                         android:layout_marginTop="4dp"/>
@@ -217,8 +299,8 @@
                     android:gravity="center"
                     android:background="#FFFFFF"
                     android:elevation="2dp"
-                    android:padding="16dp"
-                    android:layout_marginStart="8dp">
+                    android:padding="14dp"
+                    android:layout_marginStart="6dp">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -232,12 +314,95 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0 kcal"
-                        android:textSize="20sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="#333333"
                         android:layout_marginTop="4dp"/>
                 </LinearLayout>
+            </LinearLayout>
 
+            <!-- ACTIVE CHALLENGES CARD -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#FFFFFF"
+                android:elevation="3dp"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🏆 ACTIVE STEP CHALLENGE"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#EF6C00"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:id="@+id/challengeTitleTextView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Daily 10,000 Steps Challenge"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="#333333"
+                    android:layout_marginBottom="6dp"/>
+
+                <ProgressBar
+                    android:id="@+id/challengeProgressBar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="12dp"
+                    android:max="10000"
+                    android:progress="0"
+                    android:progressTint="#4CAF50"
+                    android:layout_marginBottom="6dp"/>
+
+                <TextView
+                    android:id="@+id/challengeStatusTextView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="0 / 10,000 Steps (0%)"
+                    android:textSize="12sp"
+                    android:textColor="#666666"/>
+            </LinearLayout>
+
+            <!-- LIVE TEAM LEADERBOARD CARD -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#FFFFFF"
+                android:elevation="3dp"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🥇 LIVE TEAM LEADERBOARD (ALPHA SQUAD)"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#1565C0"
+                    android:layout_marginBottom="10dp"/>
+
+                <!-- Container for Dynamic Leaderboard Rows -->
+                <LinearLayout
+                    android:id="@+id/leaderboardContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Loading team leaderboard..."
+                        android:textSize="13sp"
+                        android:textColor="#888888"
+                        android:padding="8dp"/>
+                </LinearLayout>
             </LinearLayout>
 
             <!-- Permission Grant Button (if needed) -->
@@ -259,7 +424,8 @@
                 android:text="Status: Syncing with cloud automatically..."
                 android:textSize="13sp"
                 android:textColor="#666666"
-                android:gravity="center_horizontal"/>
+                android:gravity="center_horizontal"
+                android:layout_marginBottom="16dp"/>
 
         </LinearLayout>
 

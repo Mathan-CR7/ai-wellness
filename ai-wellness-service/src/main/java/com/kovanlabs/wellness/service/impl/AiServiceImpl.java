@@ -105,6 +105,52 @@ public class AiServiceImpl implements AiService {
         return messageRepository.findByConversationIdOrderByTimestampAsc(conversationId);
     }
 
+    @Override
+    public String generateInactivitySuggestion(Long userId, String fullName, long currentSteps, long inactivityMinutes, long targetGoal) {
+        String systemPrompt = "You are an AI physical wellness coach. " +
+                "Generate a concise, friendly, 2-3 sentence physical wellness & movement recommendation for a user who has been sedentary. " +
+                "Suggest quick 10-15 minute exercises (such as shoulder rotations, wrist stretches, neck rolls, or a quick walk) appropriate for someone who has been sitting for a while. " +
+                "Do NOT include markdown formatting, bullet points, or quotes. Keep it direct, practical, and encouraging.";
+
+        String userPrompt = String.format(
+                "User: %s (ID: %d)\n" +
+                "Current Daily Steps: %d / %d\n" +
+                "Inactivity Duration: %d minutes (%d hours %d minutes)\n" +
+                "Generate a personalized movement suggestion.",
+                fullName != null ? fullName : "User",
+                userId,
+                currentSteps,
+                targetGoal,
+                inactivityMinutes,
+                inactivityMinutes / 60,
+                inactivityMinutes % 60
+        );
+
+        try {
+            String response = chatClientBuilder.build()
+                    .prompt()
+                    .system(systemPrompt)
+                    .user(userPrompt)
+                    .call()
+                    .content();
+
+            if (response != null && !response.isBlank()) {
+                return response.trim();
+            }
+        } catch (Exception e) {
+            log.warn("Spring AI call unavailable for userId={}, generating dynamic contextual suggestion: {}", userId, e.getMessage());
+        }
+
+        long remaining = Math.max(0, targetGoal - currentSteps);
+        long hours = inactivityMinutes / 60;
+        long mins = inactivityMinutes % 60;
+        String timeStr = hours > 0 ? hours + "h " + mins + "m" : mins + "m";
+        return String.format(
+                "You've been inactive for %s. Take a 5-minute walk and try some shoulder rotations, wrist stretches, and light neck rolls. You have %,d steps today — %,d steps remaining for your daily goal!",
+                timeStr, currentSteps, remaining
+        );
+    }
+
     private String callGemini(Long userId, String prompt) {
         try {
             String response = chatClientBuilder.build()
@@ -151,4 +197,3 @@ public class AiServiceImpl implements AiService {
         return false;
     }
 }
-

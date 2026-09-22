@@ -53,6 +53,16 @@ const WebSocketManager = {
           }
         });
 
+        // Subscribe to AI Inactivity Suggestions Broadcast Topic
+        this.stompClient.subscribe('/topic/inactivity-suggestions', (message) => {
+          try {
+            const data = JSON.parse(message.body);
+            this.showAiSuggestionBanner(data);
+          } catch (e) {
+            console.error('[WebSocket STOMP] Error parsing AI suggestion:', e);
+          }
+        });
+
         // Subscribe to Challenge Leaderboard Topic
         this.subscribeToChallenge(1);
       }, (error) => {
@@ -63,6 +73,15 @@ const WebSocketManager = {
     } catch (e) {
       console.warn('[WebSocket Init] Falling back to REST stream:', e);
       if (wsStatusText) wsStatusText.innerText = 'Live REST Streaming Active';
+    }
+  },
+
+  showAiSuggestionBanner(data) {
+    const banner = document.getElementById('aiSuggestionBanner');
+    const textEl = document.getElementById('aiSuggestionText');
+    if (banner && textEl && data && data.suggestion) {
+      textEl.innerText = data.suggestion;
+      banner.style.display = 'block';
     }
   },
 

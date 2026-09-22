@@ -18,10 +18,12 @@ import com.kovanlabs.wellness.repository.DailyStepRepository;
 import com.kovanlabs.wellness.service.ActivityService;
 import com.kovanlabs.wellness.service.ActivityTrendCalculator;
 import com.kovanlabs.wellness.service.ActivityValidator;
+import com.kovanlabs.wellness.service.InactivityDetectionService;
 import com.kovanlabs.wellness.service.LeaderboardService;
 import com.kovanlabs.wellness.service.WebSocketLeaderboardPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +50,7 @@ public class ActivityServiceImpl implements ActivityService {
     private final TeamProvider teamProvider;
     private final DailyStepRepository dailyStepRepository;
     private final ActivityRepository activityRepository;
+    private final InactivityDetectionService inactivityDetectionService;
 
     public ActivityServiceImpl(
             ActivityProvider activityProvider,
@@ -59,7 +62,8 @@ public class ActivityServiceImpl implements ActivityService {
             LeaderboardService leaderboardService,
             TeamProvider teamProvider,
             DailyStepRepository dailyStepRepository,
-            ActivityRepository activityRepository
+            ActivityRepository activityRepository,
+            @Lazy InactivityDetectionService inactivityDetectionService
     ) {
         this.activityProvider = activityProvider;
         this.userProvider = userProvider;
@@ -71,6 +75,7 @@ public class ActivityServiceImpl implements ActivityService {
         this.teamProvider = teamProvider;
         this.dailyStepRepository = dailyStepRepository;
         this.activityRepository = activityRepository;
+        this.inactivityDetectionService = inactivityDetectionService;
     }
 
     @Override
@@ -98,19 +103,26 @@ public class ActivityServiceImpl implements ActivityService {
         }
         dailyStepRepository.save(stepEntity);
 
-        // 2. Purge old duplicate 10s sync records for this user to prevent metric accumulation
+        // 2. Register step sync with InactivityDetectionService to check if real physical steps increased
+        try {
+            inactivityDetectionService.registerStepSync(userId, request.getStepCount().longValue());
+        } catch (Exception e) {
+            log.warn("Failed to register activity step sync with InactivityDetectionService for userId={}: {}", userId, e.getMessage());
+        }
+
+        // 3. Purge old duplicate 10s sync records for this user to prevent metric accumulation
         try {
             activityRepository.deleteByUserId(userId);
         } catch (Exception e) {
             log.warn("Could not purge duplicate activity records for userId={}: {}", userId, e.getMessage());
         }
 
-        // 3. Save clean single active Activity record
+        // 4. Save clean single active Activity record
         ActivityEntity entity = activityMapper.toEntity(request);
         entity.setUserId(userId);
         ActivityEntity savedActivity = activityProvider.save(entity);
 
-        // 4. Broadcast real-time WebSocket leaderboard updates to Team #1 & user's teams
+        // 5. Broadcast real-time WebSocket leaderboard updates to Team #1 & user's teams
         try {
             Instant now = Instant.now();
             Instant weekAgo = now.minus(7, ChronoUnit.DAYS);
