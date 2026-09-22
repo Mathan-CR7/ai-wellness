@@ -4,7 +4,7 @@ import { leaderboardService } from '../api/leaderboardService';
 import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
-import { Flame, Crown, Medal, Award, Footprints, MapPin } from 'lucide-react';
+import { Flame, Crown, Medal, Award } from 'lucide-react';
 
 export const LeaderboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -12,7 +12,7 @@ export const LeaderboardPage: React.FC = () => {
   const { data: leaderboard, isLoading } = useQuery({
     queryKey: ['teamLeaderboard', 1],
     queryFn: () => leaderboardService.getTeamLeaderboard(1),
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
 
   const rankings = leaderboard?.rankings || [];
@@ -30,7 +30,7 @@ export const LeaderboardPage: React.FC = () => {
           </h1>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Real-time step rankings for team members synced from sensor data
+          Real-time step rankings for team members synced from Health Connect sensor data
         </p>
       </div>
 
@@ -79,21 +79,26 @@ export const LeaderboardPage: React.FC = () => {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100">Live Member Rankings</h3>
-          <Badge variant="brand">Auto-Sync 10s</Badge>
+          <Badge variant="brand">Live Sync Active</Badge>
         </div>
 
         {isLoading ? (
           <p className="text-sm text-slate-400">Loading live rankings...</p>
         ) : rankings.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {rankings.map((entry) => {
-              const isCurrentUser = user && (user.id === entry.userId || user.email === entry.email);
+              const isCurrentUser =
+                user &&
+                (user.id === entry.userId ||
+                  (user.email && entry.email && user.email.toLowerCase() === entry.email.toLowerCase()) ||
+                  (user.fullName && entry.fullName && user.fullName.toLowerCase() === entry.fullName.toLowerCase()));
+
               return (
                 <div
-                  key={entry.userId}
+                  key={entry.userId || entry.email}
                   className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
                     isCurrentUser
-                      ? 'bg-brand-50/70 dark:bg-brand-950/40 border-brand-500/50 shadow-md font-bold'
+                      ? 'bg-brand-50 dark:bg-brand-950/40 border-brand-500 shadow-md font-bold'
                       : 'bg-white dark:bg-slate-900/60 border-slate-100 dark:border-slate-800'
                   }`}
                 >

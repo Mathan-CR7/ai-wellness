@@ -181,7 +181,8 @@ public class ChallengeServiceImpl implements ChallengeService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ChallengeMemberResponse> getChallengeMembers(Long challengeId) {
+    public List<ChallengeMemberResponse> getChallengeMembers(Long challengeId)
+    {
         if (challengeProvider.findById(challengeId).isEmpty())
         {
             throw new ResourceNotFoundException("Challenge not found with id: " + challengeId);
@@ -259,8 +260,6 @@ public class ChallengeServiceImpl implements ChallengeService {
             log.warn("Failed to recalculate and broadcast leaderboard for challengeId={}: {}", challengeId, e.getMessage(), e);
         }
     }
-
-
 
     private ChallengeMemberResponse toMemberResponse(ChallengeMemberEntity entity, UserEntity user) {
         return ChallengeMemberResponse.builder()
