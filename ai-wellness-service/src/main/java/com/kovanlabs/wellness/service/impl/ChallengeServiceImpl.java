@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 public class ChallengeServiceImpl implements ChallengeService {
 
     private static final Logger log = LoggerFactory.getLogger(ChallengeServiceImpl.class);
-
     private final ChallengeProvider challengeProvider;
     private final UserProvider userProvider;
     private final ActivityProvider activityProvider;
@@ -260,6 +259,7 @@ public class ChallengeServiceImpl implements ChallengeService {
             log.warn("Failed to recalculate and broadcast leaderboard for challengeId={}: {}", challengeId, e.getMessage(), e);
         }
     }
+
 
 
     private ChallengeMemberResponse toMemberResponse(ChallengeMemberEntity entity, UserEntity user) {
