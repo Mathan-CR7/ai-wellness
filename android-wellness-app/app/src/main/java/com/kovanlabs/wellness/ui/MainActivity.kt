@@ -9,12 +9,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
@@ -23,12 +18,8 @@ import com.kovanlabs.wellness.R
 import com.kovanlabs.wellness.api.AuthInterceptor
 import com.kovanlabs.wellness.api.WellnessApiService
 import com.kovanlabs.wellness.health.HealthConnectManager
-import com.kovanlabs.wellness.model.ActivitySyncPayload
-import com.kovanlabs.wellness.model.HealthConnectErrorCode
-import com.kovanlabs.wellness.model.HealthConnectState
-import com.kovanlabs.wellness.model.LoginRequest
-import com.kovanlabs.wellness.model.RegisterRequest
-import com.kovanlabs.wellness.model.StepSyncRequestDto
+import com.kovanlabs.wellness.model.*
+import com.kovanlabs.wellness.websocket.StompWebSocketClient
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -48,11 +39,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var healthConnectManager: HealthConnectManager
+    private var stompClient: StompWebSocketClient? = null
 
     // UI Containers
-    private lateinit var loginContainer: LinearLayout
-    private lateinit var dashboardContainer: LinearLayout
-    private lateinit var leaderboardContainer: LinearLayout
+    private lateinit var loginContainer: View
+    private lateinit var dashboardContainer: View
+
+    // Tab ScrollViews / Layouts
+    private lateinit var tabHome: View
+    private lateinit var tabAiCoach: View
+    private lateinit var tabChallenges: View
+    private lateinit var tabLeaderboard: View
+    private lateinit var tabProfile: View
+
+    // Bottom Navigation TextViews
+    private lateinit var navHome: TextView
+    private lateinit var navAiCoach: TextView
+    private lateinit var navChallenges: TextView
+    private lateinit var navLeaderboard: TextView
+    private lateinit var navProfile: TextView
 
     // Auth Elements
     private lateinit var authTitleTextView: TextView
@@ -63,30 +68,45 @@ class MainActivity : AppCompatActivity() {
     private lateinit var loginButton: Button
     private lateinit var toggleRegisterTextView: TextView
 
-    // Dashboard Elements
+    // Dashboard Header & Home Elements
     private lateinit var userEmailTextView: TextView
     private lateinit var logoutButton: Button
     private lateinit var stepCountTextView: TextView
+    private lateinit var stepGoalTextView: TextView
     private lateinit var distanceTextView: TextView
     private lateinit var caloriesTextView: TextView
+    private lateinit var pulseStatusTextView: TextView
     private lateinit var statusTextView: TextView
     private lateinit var permissionButton: Button
+
+    // AI Inactivity Suggestion Elements
+    private lateinit var aiSuggestionCard: View
+    private lateinit var aiSuggestionTextView: TextView
+    private lateinit var aiSuggestionTimeTextView: TextView
+
+    // AI Coach Chat Elements
+    private lateinit var aiChatLogTextView: TextView
+    private lateinit var aiChatInputEditText: EditText
+    private lateinit var aiChatSendButton: Button
 
     // Challenge Elements
     private lateinit var challengeTitleTextView: TextView
     private lateinit var challengeProgressBar: ProgressBar
     private lateinit var challengeStatusTextView: TextView
 
-    // AI Inactivity Suggestion Elements
-    private lateinit var aiSuggestionCard: LinearLayout
-    private lateinit var aiSuggestionTextView: TextView
-    private lateinit var aiSuggestionTimeTextView: TextView
+    // Leaderboard Container
+    private lateinit var leaderboardContainer: LinearLayout
+
+    // Profile & Workout Elements
+    private lateinit var exerciseTypeEditText: EditText
+    private lateinit var exerciseDurationEditText: EditText
+    private lateinit var logExerciseButton: Button
 
     private var isRegisterMode = false
     private var autoSyncJob: Job? = null
     private var currentStepCount = 0
+    private var currentGoal = 10000
 
-    // Health Connect Permission Contract
     private val requestPermissionActivityContract = PermissionController.createRequestPermissionResultContract()
     private val requestPermissions = registerForActivityResult(requestPermissionActivityContract) { _ ->
         lifecycleScope.launch {
@@ -100,11 +120,23 @@ class MainActivity : AppCompatActivity() {
 
         healthConnectManager = HealthConnectManager(this)
 
-        // Bind Views
+        // Bind Containers
         loginContainer = findViewById(R.id.loginContainer)
         dashboardContainer = findViewById(R.id.dashboardContainer)
-        leaderboardContainer = findViewById(R.id.leaderboardContainer)
 
+        tabHome = findViewById(R.id.tabHome)
+        tabAiCoach = findViewById(R.id.tabAiCoach)
+        tabChallenges = findViewById(R.id.tabChallenges)
+        tabLeaderboard = findViewById(R.id.tabLeaderboard)
+        tabProfile = findViewById(R.id.tabProfile)
+
+        navHome = findViewById(R.id.navHome)
+        navAiCoach = findViewById(R.id.navAiCoach)
+        navChallenges = findViewById(R.id.navChallenges)
+        navLeaderboard = findViewById(R.id.navLeaderboard)
+        navProfile = findViewById(R.id.navProfile)
+
+        // Bind Auth
         authTitleTextView = findViewById(R.id.authTitleTextView)
         fullNameLabelTextView = findViewById(R.id.fullNameLabelTextView)
         fullNameEditText = findViewById(R.id.fullNameEditText)
@@ -113,23 +145,40 @@ class MainActivity : AppCompatActivity() {
         loginButton = findViewById(R.id.loginButton)
         toggleRegisterTextView = findViewById(R.id.toggleRegisterTextView)
 
+        // Bind Dashboard
         userEmailTextView = findViewById(R.id.userEmailTextView)
         logoutButton = findViewById(R.id.logoutButton)
         stepCountTextView = findViewById(R.id.stepCountTextView)
+        stepGoalTextView = findViewById(R.id.stepGoalTextView)
         distanceTextView = findViewById(R.id.distanceTextView)
         caloriesTextView = findViewById(R.id.caloriesTextView)
+        pulseStatusTextView = findViewById(R.id.pulseStatusTextView)
         statusTextView = findViewById(R.id.statusTextView)
         permissionButton = findViewById(R.id.permissionButton)
-
-        challengeTitleTextView = findViewById(R.id.challengeTitleTextView)
-        challengeProgressBar = findViewById(R.id.challengeProgressBar)
-        challengeStatusTextView = findViewById(R.id.challengeStatusTextView)
 
         aiSuggestionCard = findViewById(R.id.aiSuggestionCard)
         aiSuggestionTextView = findViewById(R.id.aiSuggestionTextView)
         aiSuggestionTimeTextView = findViewById(R.id.aiSuggestionTimeTextView)
 
-        // Event Listeners
+        // Bind AI Chat
+        aiChatLogTextView = findViewById(R.id.aiChatLogTextView)
+        aiChatInputEditText = findViewById(R.id.aiChatInputEditText)
+        aiChatSendButton = findViewById(R.id.aiChatSendButton)
+
+        // Bind Challenges
+        challengeTitleTextView = findViewById(R.id.challengeTitleTextView)
+        challengeProgressBar = findViewById(R.id.challengeProgressBar)
+        challengeStatusTextView = findViewById(R.id.challengeStatusTextView)
+
+        // Bind Leaderboard
+        leaderboardContainer = findViewById(R.id.leaderboardContainer)
+
+        // Bind Profile & Exercises
+        exerciseTypeEditText = findViewById(R.id.exerciseTypeEditText)
+        exerciseDurationEditText = findViewById(R.id.exerciseDurationEditText)
+        logExerciseButton = findViewById(R.id.logExerciseButton)
+
+        // Setup Listeners
         loginButton.setOnClickListener {
             if (isRegisterMode) handleRegister() else handleLogin()
         }
@@ -141,10 +190,19 @@ class MainActivity : AppCompatActivity() {
 
         logoutButton.setOnClickListener { handleLogout() }
         permissionButton.setOnClickListener { requestHealthConnectPermissions() }
-        permissionButton.setOnLongClickListener {
-            openHealthConnectSettings()
-            true
-        }
+
+        // Setup Bottom Nav Clicks
+        navHome.setOnClickListener { switchTab(0) }
+        navAiCoach.setOnClickListener { switchTab(1) }
+        navChallenges.setOnClickListener { switchTab(2) }
+        navLeaderboard.setOnClickListener { switchTab(3) }
+        navProfile.setOnClickListener { switchTab(4) }
+
+        // AI Chat Send Listener
+        aiChatSendButton.setOnClickListener { handleSendAiChat() }
+
+        // Workout Log Listener
+        logExerciseButton.setOnClickListener { handleLogExercise() }
 
         checkAuthSession()
     }
@@ -154,6 +212,11 @@ class MainActivity : AppCompatActivity() {
         if (isUserLoggedIn()) {
             checkHealthConnectStatus()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stompClient?.disconnect()
     }
 
     private fun isUserLoggedIn(): Boolean {
@@ -177,22 +240,51 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun switchTab(index: Int) {
+        tabHome.visibility = if (index == 0) View.VISIBLE else View.GONE
+        tabAiCoach.visibility = if (index == 1) View.VISIBLE else View.GONE
+        tabChallenges.visibility = if (index == 2) View.VISIBLE else View.GONE
+        tabLeaderboard.visibility = if (index == 3) View.VISIBLE else View.GONE
+        tabProfile.visibility = if (index == 4) View.VISIBLE else View.GONE
+
+        navHome.setTextColor(if (index == 0) Color.parseColor("#2E7D32") else Color.parseColor("#777777"))
+        navAiCoach.setTextColor(if (index == 1) Color.parseColor("#6A1B9A") else Color.parseColor("#777777"))
+        navChallenges.setTextColor(if (index == 2) Color.parseColor("#E65100") else Color.parseColor("#777777"))
+        navLeaderboard.setTextColor(if (index == 3) Color.parseColor("#1565C0") else Color.parseColor("#777777"))
+        navProfile.setTextColor(if (index == 4) Color.parseColor("#2E7D32") else Color.parseColor("#777777"))
+    }
+
     private fun checkAuthSession() {
         if (isUserLoggedIn()) {
             val savedEmail = getSharedPreferences("wellness_auth_prefs", MODE_PRIVATE)
                 .getString("saved_email", "Logged In User") ?: "Logged In User"
             userEmailTextView.text = "Logged in: $savedEmail"
+            logoutButton.visibility = View.VISIBLE
 
             loginContainer.visibility = View.GONE
             dashboardContainer.visibility = View.VISIBLE
 
             checkHealthConnectStatus()
+            fetchUserProfile()
             fetchLeaderboard()
             fetchChallenges()
+            initWebSocket()
         } else {
             loginContainer.visibility = View.VISIBLE
             dashboardContainer.visibility = View.GONE
+            logoutButton.visibility = View.GONE
         }
+    }
+
+    private fun initWebSocket() {
+        stompClient = StompWebSocketClient { suggestion ->
+            runOnUiThread {
+                aiSuggestionTextView.text = suggestion.suggestion
+                aiSuggestionTimeTextView.text = "Just now"
+                aiSuggestionCard.visibility = View.VISIBLE
+            }
+        }
+        stompClient?.connect()
     }
 
     private fun handleRegister() {
@@ -223,7 +315,7 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this@MainActivity, "Registration Successful! Welcome $fullName", Toast.LENGTH_SHORT).show()
                     checkAuthSession()
                 } else {
-                    Toast.makeText(this@MainActivity, "Registration failed (${response.code()}): ${response.message()}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Registration failed (${response.code()})", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Register error: ${e.message}", e)
@@ -262,7 +354,7 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this@MainActivity, "Welcome back, $email!", Toast.LENGTH_SHORT).show()
                     checkAuthSession()
                 } else {
-                    Toast.makeText(this@MainActivity, "Login failed (${response.code()}): Invalid credentials", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Login failed: Invalid credentials", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Login error: ${e.message}", e)
@@ -276,6 +368,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleLogout() {
         autoSyncJob?.cancel()
+        stompClient?.disconnect()
         getSharedPreferences("wellness_auth_prefs", MODE_PRIVATE)
             .edit()
             .remove("jwt_token")
@@ -284,6 +377,76 @@ class MainActivity : AppCompatActivity() {
 
         Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
         checkAuthSession()
+    }
+
+    private fun fetchUserProfile() {
+        lifecycleScope.launch {
+            try {
+                val response = getApiService().getUserProfile()
+                if (response.isSuccessful && response.body() != null) {
+                    val profile = response.body()!!
+                    currentGoal = profile.dailyStepGoal ?: 10000
+                    stepGoalTextView.text = "/ %,d steps goal".format(currentGoal)
+                    userEmailTextView.text = "${profile.fullName ?: profile.email}"
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Fetch profile error: ${e.message}")
+            }
+        }
+    }
+
+    private fun handleSendAiChat() {
+        val userMsg = aiChatInputEditText.text.toString().trim()
+        if (userMsg.isBlank()) return
+
+        aiChatLogTextView.append("\n\nYou: $userMsg")
+        aiChatInputEditText.setText("")
+        aiChatSendButton.isEnabled = false
+
+        lifecycleScope.launch {
+            try {
+                val response = getApiService().chatAi(AIChatRequestDto(userMsg))
+                if (response.isSuccessful && response.body() != null) {
+                    val reply = response.body()!!.message
+                    aiChatLogTextView.append("\n\n🤖 AI Coach: $reply")
+                } else {
+                    aiChatLogTextView.append("\n\n🤖 AI Coach: I am processing your health data...")
+                }
+            } catch (e: Exception) {
+                aiChatLogTextView.append("\n\n🤖 AI Coach: Connection error: ${e.message}")
+            } finally {
+                aiChatSendButton.isEnabled = true
+            }
+        }
+    }
+
+    private fun handleLogExercise() {
+        val type = exerciseTypeEditText.text.toString().trim()
+        val durationStr = exerciseDurationEditText.text.toString().trim()
+
+        if (type.isBlank() || durationStr.isBlank()) {
+            Toast.makeText(this, "Please enter workout type and duration", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val duration = durationStr.toIntOrNull() ?: 30
+        val calories = duration * 5
+
+        logExerciseButton.isEnabled = false
+        lifecycleScope.launch {
+            try {
+                val response = getApiService().logExercise(ExerciseLogRequestDto(type, duration, calories))
+                if (response.isSuccessful) {
+                    Toast.makeText(this@MainActivity, "Workout logged: $type ($duration mins)", Toast.LENGTH_SHORT).show()
+                    exerciseTypeEditText.setText("")
+                    exerciseDurationEditText.setText("")
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Error logging workout: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                logExerciseButton.isEnabled = true
+            }
+        }
     }
 
     private fun checkHealthConnectStatus() {
@@ -335,9 +498,9 @@ class MainActivity : AppCompatActivity() {
                 if (freshState is HealthConnectState.DataRetrieved) {
                     currentStepCount = freshState.stepCount
                     updateChallengeProgress(currentStepCount)
+                    updateWellnessPulse(currentStepCount)
 
                     try {
-                        // 1. Send idempotent step sync to /api/steps/sync
                         val stepDto = StepSyncRequestDto(
                             steps = freshState.stepCount.toLong(),
                             date = LocalDate.now().toString(),
@@ -345,7 +508,6 @@ class MainActivity : AppCompatActivity() {
                         )
                         getApiService().syncSteps(stepDto)
 
-                        // 2. Send activity sync to /api/activities/sync
                         val payload = ActivitySyncPayload(
                             stepCount = freshState.stepCount,
                             distanceMeters = freshState.distanceMeters,
@@ -357,7 +519,6 @@ class MainActivity : AppCompatActivity() {
                         getApiService().syncActivity(payload)
                         statusTextView.text = "Status: Live Cloud Sync Active (${freshState.stepCount} steps)"
 
-                        // 3. Refresh live leaderboard and challenge cards
                         fetchLeaderboard()
                         fetchChallenges()
 
@@ -368,6 +529,16 @@ class MainActivity : AppCompatActivity() {
                 }
                 delay(10000L)
             }
+        }
+    }
+
+    private fun updateWellnessPulse(steps: Int) {
+        val percent = if (currentGoal > 0) (steps.toDouble() / currentGoal * 100).toInt() else 0
+        pulseStatusTextView.text = when {
+            percent >= 100 -> "Goal Reached! 🎉 Great job completing target."
+            percent >= 75 -> "Goal Progressing! 🔥 Keep going strong."
+            percent >= 40 -> "Moderately Active 🏃 Steady progress recorded."
+            else -> "Low Activity 🧘 Take a short walk & stretch!"
         }
     }
 
@@ -385,7 +556,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderLeaderboardUI(rankings: List<com.kovanlabs.wellness.model.LeaderboardEntry>) {
+    private fun renderLeaderboardUI(rankings: List<LeaderboardEntry>) {
         leaderboardContainer.removeAllViews()
 
         if (rankings.isEmpty()) {
@@ -411,9 +582,9 @@ class MainActivity : AppCompatActivity() {
                 textSize = 14f
                 setTypeface(null, Typeface.BOLD)
                 setTextColor(when (entry.rank) {
-                    1 -> Color.parseColor("#FF8F00") // Gold
-                    2 -> Color.parseColor("#757575") // Silver
-                    3 -> Color.parseColor("#A1887F") // Bronze
+                    1 -> Color.parseColor("#FF8F00")
+                    2 -> Color.parseColor("#757575")
+                    3 -> Color.parseColor("#A1887F")
                     else -> Color.parseColor("#333333")
                 })
                 layoutParams = LinearLayout.LayoutParams(
@@ -508,6 +679,7 @@ class MainActivity : AppCompatActivity() {
                 statusTextView.text = "Status: Active Sensor Reading (${state.stepCount} steps)"
                 permissionButton.visibility = View.GONE
                 updateChallengeProgress(currentStepCount)
+                updateWellnessPulse(currentStepCount)
             }
             is HealthConnectState.DataUnchanged -> {
                 stepCountTextView.text = "%,d".format(state.stepCount)

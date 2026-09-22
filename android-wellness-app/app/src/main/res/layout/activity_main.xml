@@ -1,396 +1,488 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
+    android:orientation="vertical"
     android:background="#F8F9FA">
 
+    <!-- TOP HEADER TOOLBAR -->
     <LinearLayout
+        android:id="@+id/topHeaderBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#FFFFFF"
+        android:elevation="4dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp">
 
-        <!-- App Branding Header -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="AI Wellness Tracker"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="#1B5E20"
-            android:gravity="center_horizontal"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="2dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Real-Time Sensor Step Sync"
-            android:textSize="13sp"
-            android:textColor="#666666"
-            android:gravity="center_horizontal"
-            android:layout_marginBottom="20dp"/>
-
-        <!-- STATE 1: LOGIN / REGISTER CONTAINER -->
         <LinearLayout
-            android:id="@+id/loginContainer"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#FFFFFF"
-            android:elevation="4dp"
-            android:padding="20dp"
-            android:visibility="visible">
+            android:layout_weight="1"
+            android:orientation="vertical">
 
             <TextView
-                android:id="@+id/authTitleTextView"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Account Login"
-                android:textSize="18sp"
+                android:text="AURA WELLNESS"
+                android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="#333333"
-                android:layout_marginBottom="16dp"/>
-
-            <!-- Full Name (Register mode only) -->
-            <TextView
-                android:id="@+id/fullNameLabelTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Full Name"
-                android:textSize="12sp"
-                android:textColor="#555555"
-                android:visibility="gone"
-                android:layout_marginBottom="4dp"/>
-
-            <EditText
-                android:id="@+id/fullNameEditText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="e.g. Mathan R"
-                android:inputType="textPersonName"
-                android:padding="12dp"
-                android:background="@android:drawable/editbox_background"
-                android:visibility="gone"
-                android:layout_marginBottom="14dp"/>
+                android:textColor="#1B5E20"
+                android:letterSpacing="0.05"/>
 
             <TextView
-                android:layout_width="match_parent"
+                android:id="@+id/userEmailTextView"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Email Address"
-                android:textSize="12sp"
-                android:textColor="#555555"
-                android:layout_marginBottom="4dp"/>
-
-            <EditText
-                android:id="@+id/emailEditText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="e.g. mathan@wellness.app"
-                android:inputType="textEmailAddress"
-                android:padding="12dp"
-                android:background="@android:drawable/editbox_background"
-                android:layout_marginBottom="14dp"/>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Password"
-                android:textSize="12sp"
-                android:textColor="#555555"
-                android:layout_marginBottom="4dp"/>
-
-            <EditText
-                android:id="@+id/passwordEditText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Password"
-                android:inputType="textPassword"
-                android:padding="12dp"
-                android:background="@android:drawable/editbox_background"
-                android:layout_marginBottom="20dp"/>
-
-            <Button
-                android:id="@+id/loginButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="SIGN IN"
-                android:textStyle="bold"
-                android:backgroundTint="#2E7D32"
-                android:textColor="#FFFFFF"
-                android:padding="14dp"
-                android:layout_marginBottom="12dp"/>
-
-            <TextView
-                android:id="@+id/toggleRegisterTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Don't have an account? Register here"
-                android:textSize="13sp"
-                android:textColor="#1976D2"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:padding="8dp"/>
-
+                android:text="Real-Time Health Sensor Active"
+                android:textSize="11sp"
+                android:textColor="#666666"/>
         </LinearLayout>
 
-        <!-- STATE 2: DASHBOARD CONTAINER -->
+        <Button
+            android:id="@+id/logoutButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Logout"
+            android:textSize="11sp"
+            android:backgroundTint="#D32F2F"
+            android:textColor="#FFFFFF"
+            android:paddingHorizontal="12dp"
+            android:visibility="gone"/>
+    </LinearLayout>
+
+    <!-- STATE 1: LOGIN / REGISTER CONTAINER -->
+    <ScrollView
+        android:id="@+id/loginContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:visibility="visible">
+
         <LinearLayout
-            android:id="@+id/dashboardContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:visibility="gone">
+            android:padding="24dp"
+            android:gravity="center">
 
-            <!-- User Header Bar -->
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="16dp">
-
-                <TextView
-                    android:id="@+id/userEmailTextView"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Logged in as user"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="#333333"/>
-
-                <Button
-                    android:id="@+id/logoutButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Logout"
-                    android:textSize="12sp"
-                    android:backgroundTint="#D32F2F"
-                    android:textColor="#FFFFFF"/>
-            </LinearLayout>
-
-            <!-- AI WELLNESS INACTIVITY SUGGESTION CARD -->
-            <LinearLayout
-                android:id="@+id/aiSuggestionCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="#FFF3E0"
-                android:elevation="3dp"
+                android:background="#FFFFFF"
+                android:elevation="6dp"
+                android:padding="24dp">
+
+                <TextView
+                    android:id="@+id/authTitleTextView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Account Login"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="#1B5E20"
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- Full Name (Register mode only) -->
+                <TextView
+                    android:id="@+id/fullNameLabelTextView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Full Name"
+                    android:textSize="12sp"
+                    android:textColor="#555555"
+                    android:visibility="gone"
+                    android:layout_marginBottom="4dp"/>
+
+                <EditText
+                    android:id="@+id/fullNameEditText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="e.g. Mathan R"
+                    android:inputType="textPersonName"
+                    android:padding="12dp"
+                    android:background="@android:drawable/editbox_background"
+                    android:visibility="gone"
+                    android:layout_marginBottom="14dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Email Address"
+                    android:textSize="12sp"
+                    android:textColor="#555555"
+                    android:layout_marginBottom="4dp"/>
+
+                <EditText
+                    android:id="@+id/emailEditText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="e.g. mathan@wellness.app"
+                    android:inputType="textEmailAddress"
+                    android:padding="12dp"
+                    android:background="@android:drawable/editbox_background"
+                    android:layout_marginBottom="14dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Password"
+                    android:textSize="12sp"
+                    android:textColor="#555555"
+                    android:layout_marginBottom="4dp"/>
+
+                <EditText
+                    android:id="@+id/passwordEditText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Password"
+                    android:inputType="textPassword"
+                    android:padding="12dp"
+                    android:background="@android:drawable/editbox_background"
+                    android:layout_marginBottom="20dp"/>
+
+                <Button
+                    android:id="@+id/loginButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="SIGN IN"
+                    android:textStyle="bold"
+                    android:backgroundTint="#2E7D32"
+                    android:textColor="#FFFFFF"
+                    android:padding="14dp"
+                    android:layout_marginBottom="12dp"/>
+
+                <TextView
+                    android:id="@+id/toggleRegisterTextView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Don't have an account? Register here"
+                    android:textSize="13sp"
+                    android:textColor="#1976D2"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:padding="8dp"/>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- STATE 2: AUTHENTICATED DASHBOARD & TAB CONTAINER -->
+    <LinearLayout
+        android:id="@+id/dashboardContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <!-- TAB CONTENT AREA -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <!-- TAB 1: HOME DASHBOARD -->
+            <ScrollView
+                android:id="@+id/tabHome"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- AI WELLNESS INACTIVITY SUGGESTION CARD -->
+                    <LinearLayout
+                        android:id="@+id/aiSuggestionCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="#FFF3E0"
+                        android:elevation="3dp"
+                        android:padding="16dp"
+                        android:visibility="gone"
+                        android:layout_marginBottom="14dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="6dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="⚡ AI INACTIVITY SUGGESTION"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="#E65100"/>
+
+                            <TextView
+                                android:id="@+id/aiSuggestionTimeTextView"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Just now"
+                                android:textSize="11sp"
+                                android:textColor="#8D6E63"/>
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/aiSuggestionTextView"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Take a 5-minute walk and try some light shoulder rotations!"
+                            android:textSize="14sp"
+                            android:textColor="#3E2723"
+                            android:lineSpacingExtra="2dp"/>
+                    </LinearLayout>
+
+                    <!-- Main Step Progress Ring Card -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:background="#E8F5E9"
+                        android:padding="20dp"
+                        android:elevation="2dp"
+                        android:layout_marginBottom="14dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="TODAY'S MOVEMENT"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textColor="#2E7D32"
+                            android:letterSpacing="0.1"/>
+
+                        <TextView
+                            android:id="@+id/stepCountTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textSize="42sp"
+                            android:textStyle="bold"
+                            android:textColor="#1B5E20"
+                            android:layout_marginVertical="4dp"/>
+
+                        <TextView
+                            android:id="@+id/stepGoalTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="/ 10,000 steps goal"
+                            android:textSize="12sp"
+                            android:textColor="#388E3C"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+
+                    <!-- Sub Metrics Row (Distance & Calories) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="14dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:background="#FFFFFF"
+                            android:elevation="2dp"
+                            android:padding="12dp"
+                            android:layout_marginEnd="4dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="DISTANCE"
+                                android:textSize="10sp"
+                                android:textColor="#888888"/>
+
+                            <TextView
+                                android:id="@+id/distanceTextView"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0.0 km"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="#333333"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:background="#FFFFFF"
+                            android:elevation="2dp"
+                            android:padding="12dp"
+                            android:layout_marginStart="4dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="CALORIES"
+                                android:textSize="10sp"
+                                android:textColor="#888888"/>
+
+                            <TextView
+                                android:id="@+id/caloriesTextView"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0 kcal"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="#333333"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- WELLNESS PULSE EVALUATION CARD -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="#FFFFFF"
+                        android:elevation="2dp"
+                        android:padding="14dp"
+                        android:layout_marginBottom="14dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="💓 WELLNESS PULSE EVALUATION"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textColor="#2E7D32"
+                            android:layout_marginBottom="6dp"/>
+
+                        <TextView
+                            android:id="@+id/pulseStatusTextView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Status: Active Sensor Syncing..."
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="#333333"/>
+                    </LinearLayout>
+
+                    <!-- Permission Grant Button (if needed) -->
+                    <Button
+                        android:id="@+id/permissionButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Grant Health Connect Permissions"
+                        android:backgroundTint="#F57C00"
+                        android:textColor="#FFFFFF"
+                        android:visibility="gone"
+                        android:layout_marginBottom="14dp"/>
+
+                    <!-- Status Bar -->
+                    <TextView
+                        android:id="@+id/statusTextView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Status: Live Health Connect Sensor Active"
+                        android:textSize="12sp"
+                        android:textColor="#666666"
+                        android:gravity="center_horizontal"/>
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- TAB 2: AI COACH CHAT -->
+            <LinearLayout
+                android:id="@+id/tabAiCoach"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
                 android:padding="16dp"
-                android:visibility="gone"
-                android:layout_marginBottom="16dp">
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🤖 Spring AI Wellness Coach"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#6A1B9A"
+                    android:layout_marginBottom="4dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Ask for workout routines, stretching, or active recovery tips"
+                    android:textSize="12sp"
+                    android:textColor="#666666"
+                    android:layout_marginBottom="12dp"/>
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:background="#FFFFFF"
+                    android:elevation="2dp"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:id="@+id/aiChatLogTextView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="AI Coach: Hello! How can I assist your activity goals today?"
+                        android:textSize="13sp"
+                        android:textColor="#333333"
+                        android:lineSpacingExtra="4dp"/>
+                </ScrollView>
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="6dp">
+                    android:layout_marginTop="10dp">
 
-                    <TextView
+                    <EditText
+                        android:id="@+id/aiChatInputEditText"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="⚡ AI INACTIVITY SUGGESTION"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:textColor="#E65100"/>
+                        android:hint="Ask your AI coach..."
+                        android:padding="12dp"
+                        android:background="@android:drawable/editbox_background"/>
 
-                    <TextView
-                        android:id="@+id/aiSuggestionTimeTextView"
+                    <Button
+                        android:id="@+id/aiChatSendButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Just now"
-                        android:textSize="11sp"
-                        android:textColor="#8D6E63"/>
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/aiSuggestionTextView"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Take a 5-minute walk and try some light shoulder rotations and neck stretches!"
-                    android:textSize="14sp"
-                    android:textColor="#3E2723"
-                    android:lineSpacingExtra="2dp"/>
-            </LinearLayout>
-
-            <!-- Main Step Card -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:background="#E8F5E9"
-                android:padding="24dp"
-                android:layout_marginBottom="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="TODAY'S STEPS"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:textColor="#2E7D32"
-                    android:letterSpacing="0.1"/>
-
-                <TextView
-                    android:id="@+id/stepCountTextView"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textSize="44sp"
-                    android:textStyle="bold"
-                    android:textColor="#1B5E20"
-                    android:layout_marginVertical="6dp"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Health Connect Real-Time Sensor"
-                    android:textSize="12sp"
-                    android:textColor="#4CAF50"/>
-            </LinearLayout>
-
-            <!-- Sub Metrics Row (Distance & Calories) -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:background="#FFFFFF"
-                    android:elevation="2dp"
-                    android:padding="14dp"
-                    android:layout_marginEnd="6dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="DISTANCE"
-                        android:textSize="11sp"
-                        android:textColor="#888888"/>
-
-                    <TextView
-                        android:id="@+id/distanceTextView"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0.0 km"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="#333333"
-                        android:layout_marginTop="4dp"/>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:background="#FFFFFF"
-                    android:elevation="2dp"
-                    android:padding="14dp"
-                    android:layout_marginStart="6dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="CALORIES"
-                        android:textSize="11sp"
-                        android:textColor="#888888"/>
-
-                    <TextView
-                        android:id="@+id/caloriesTextView"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0 kcal"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="#333333"
-                        android:layout_marginTop="4dp"/>
+                        android:text="Send"
+                        android:backgroundTint="#6A1B9A"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginStart="8dp"/>
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- ACTIVE CHALLENGES CARD -->
-            <LinearLayout
+            <!-- TAB 3: CHALLENGES -->
+            <ScrollView
+                android:id="@+id/tabChallenges"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="#FFFFFF"
-                android:elevation="3dp"
+                android:layout_height="match_parent"
                 android:padding="16dp"
-                android:layout_marginBottom="16dp">
+                android:visibility="gone">
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="🏆 ACTIVE STEP CHALLENGE"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:textColor="#EF6C00"
-                    android:layout_marginBottom="8dp"/>
-
-                <TextView
-                    android:id="@+id/challengeTitleTextView"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Daily 10,000 Steps Challenge"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    android:textColor="#333333"
-                    android:layout_marginBottom="6dp"/>
-
-                <ProgressBar
-                    android:id="@+id/challengeProgressBar"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="12dp"
-                    android:max="10000"
-                    android:progress="0"
-                    android:progressTint="#4CAF50"
-                    android:layout_marginBottom="6dp"/>
-
-                <TextView
-                    android:id="@+id/challengeStatusTextView"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="0 / 10,000 Steps (0%)"
-                    android:textSize="12sp"
-                    android:textColor="#666666"/>
-            </LinearLayout>
-
-            <!-- LIVE TEAM LEADERBOARD CARD -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="#FFFFFF"
-                android:elevation="3dp"
-                android:padding="16dp"
-                android:layout_marginBottom="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="🥇 LIVE TEAM LEADERBOARD (ALPHA SQUAD)"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:textColor="#1565C0"
-                    android:layout_marginBottom="10dp"/>
-
-                <!-- Container for Dynamic Leaderboard Rows -->
                 <LinearLayout
-                    android:id="@+id/leaderboardContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
@@ -398,36 +490,225 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Loading team leaderboard..."
-                        android:textSize="13sp"
-                        android:textColor="#888888"
-                        android:padding="8dp"/>
+                        android:text="🏆 Active Step Challenges"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#E65100"
+                        android:layout_marginBottom="12dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="#FFFFFF"
+                        android:elevation="2dp"
+                        android:padding="16dp"
+                        android:layout_marginBottom="14dp">
+
+                        <TextView
+                            android:id="@+id/challengeTitleTextView"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Daily 10,000 Steps Challenge"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="#333333"
+                            android:layout_marginBottom="8dp"/>
+
+                        <ProgressBar
+                            android:id="@+id/challengeProgressBar"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="12dp"
+                            android:max="10000"
+                            android:progress="0"
+                            android:progressTint="#4CAF50"
+                            android:layout_marginBottom="8dp"/>
+
+                        <TextView
+                            android:id="@+id/challengeStatusTextView"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="0 / 10,000 Steps (0%)"
+                            android:textSize="12sp"
+                            android:textColor="#666666"/>
+                    </LinearLayout>
                 </LinearLayout>
-            </LinearLayout>
+            </ScrollView>
 
-            <!-- Permission Grant Button (if needed) -->
-            <Button
-                android:id="@+id/permissionButton"
+            <!-- TAB 4: LEADERBOARD -->
+            <ScrollView
+                android:id="@+id/tabLeaderboard"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Grant Health Connect Permissions"
-                android:backgroundTint="#F57C00"
-                android:textColor="#FFFFFF"
-                android:visibility="gone"
-                android:layout_marginBottom="16dp"/>
+                android:layout_height="match_parent"
+                android:padding="16dp"
+                android:visibility="gone">
 
-            <!-- Status Indicator -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🥇 Live Team Leaderboard"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#1565C0"
+                        android:layout_marginBottom="12dp"/>
+
+                    <LinearLayout
+                        android:id="@+id/leaderboardContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="#FFFFFF"
+                        android:elevation="2dp"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Loading team leaderboard..."
+                            android:textSize="13sp"
+                            android:textColor="#888888"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- TAB 5: PROFILE & WORKOUTS -->
+            <ScrollView
+                android:id="@+id/tabProfile"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="16dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="👤 Profile &amp; Workout Logging"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#1B5E20"
+                        android:layout_marginBottom="12dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="#FFFFFF"
+                        android:elevation="2dp"
+                        android:padding="16dp"
+                        android:layout_marginBottom="14dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Log Workout Session"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="#333333"
+                            android:layout_marginBottom="10dp"/>
+
+                        <EditText
+                            android:id="@+id/exerciseTypeEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Type e.g. Running, Yoga, Cycling"
+                            android:padding="10dp"
+                            android:background="@android:drawable/editbox_background"
+                            android:layout_marginBottom="10dp"/>
+
+                        <EditText
+                            android:id="@+id/exerciseDurationEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Duration in Minutes (e.g. 30)"
+                            android:inputType="number"
+                            android:padding="10dp"
+                            android:background="@android:drawable/editbox_background"
+                            android:layout_marginBottom="10dp"/>
+
+                        <Button
+                            android:id="@+id/logExerciseButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="SAVE WORKOUT"
+                            android:backgroundTint="#2E7D32"
+                            android:textColor="#FFFFFF"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </ScrollView>
+
+        </FrameLayout>
+
+        <!-- BOTTOM TAB NAVIGATION BAR -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:orientation="horizontal"
+            android:background="#FFFFFF"
+            android:elevation="8dp"
+            android:gravity="center_vertical">
+
             <TextView
-                android:id="@+id/statusTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Status: Syncing with cloud automatically..."
-                android:textSize="13sp"
-                android:textColor="#666666"
-                android:gravity="center_horizontal"
-                android:layout_marginBottom="16dp"/>
+                android:id="@+id/navHome"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="🏠\nHome"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#2E7D32"
+                android:gravity="center"/>
 
+            <TextView
+                android:id="@+id/navAiCoach"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="🤖\nAI Coach"
+                android:textSize="10sp"
+                android:textColor="#777777"
+                android:gravity="center"/>
+
+            <TextView
+                android:id="@+id/navChallenges"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="🏆\nChallenges"
+                android:textSize="10sp"
+                android:textColor="#777777"
+                android:gravity="center"/>
+
+            <TextView
+                android:id="@+id/navLeaderboard"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="🥇\nRankings"
+                android:textSize="10sp"
+                android:textColor="#777777"
+                android:gravity="center"/>
+
+            <TextView
+                android:id="@+id/navProfile"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="👤\nProfile"
+                android:textSize="10sp"
+                android:textColor="#777777"
+                android:gravity="center"/>
         </LinearLayout>
-
     </LinearLayout>
-</ScrollView>
+
+</LinearLayout>

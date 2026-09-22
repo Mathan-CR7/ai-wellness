@@ -21,8 +21,8 @@ import java.util.Optional;
 
 @Service
 @Transactional
-public class StepServiceImpl implements StepService {
-
+public class StepServiceImpl implements StepService
+{
     private static final Logger log = LoggerFactory.getLogger(StepServiceImpl.class);
 
     private final DailyStepRepository dailyStepRepository;
@@ -89,7 +89,8 @@ public class StepServiceImpl implements StepService {
 
     @Override
     @Transactional(readOnly = true)
-    public DailyStepResponse getTodaySteps(Long userId) {
+    public DailyStepResponse getTodaySteps(Long userId)
+    {
         LocalDate today = LocalDate.now(ZoneId.systemDefault());
         return getStepsForDate(userId, today);
     }
@@ -111,7 +112,8 @@ public class StepServiceImpl implements StepService {
         return toResponse(entity);
     }
 
-    private DailyStepResponse toResponse(DailyStepEntity entity) {
+    private DailyStepResponse toResponse(DailyStepEntity entity)
+    {
         return DailyStepResponse.builder()
                 .id(entity.getId())
                 .userId(entity.getUserId())
@@ -121,4 +123,5 @@ public class StepServiceImpl implements StepService {
                 .updatedAt(entity.getUpdatedAt())
                 .build();
     }
+
 }
