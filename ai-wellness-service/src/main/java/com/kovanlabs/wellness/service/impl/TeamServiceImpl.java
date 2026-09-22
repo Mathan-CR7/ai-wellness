@@ -141,6 +141,9 @@ public class TeamServiceImpl implements TeamService
                 .collect(Collectors.toList());
     }
 
+    
+
+
     @Override
     public void removeMember(Long teamId, Long requesterId, Long memberId)
     {
@@ -151,7 +154,8 @@ public class TeamServiceImpl implements TeamService
             throw new IllegalArgumentException("Team owner cannot remove themselves. Transfer ownership first.");
         }
 
-        if (!team.getOwnerId().equals(requesterId) && !requesterId.equals(memberId)) {
+        if (!team.getOwnerId().equals(requesterId) && !requesterId.equals(memberId))
+        {
             throw new UnauthorizedException("Only team owner can remove other members from the team.");
         }
 

@@ -204,6 +204,11 @@ class MainActivity : AppCompatActivity() {
         // Workout Log Listener
         logExerciseButton.setOnClickListener { handleLogExercise() }
 
+        // Start Break Listener
+        findViewById<Button>(R.id.startBreakButton)?.setOnClickListener {
+            Toast.makeText(this, "🌿 Guided Movement Break Started! Perform 5-min walk & stretches.", Toast.LENGTH_LONG).show()
+        }
+
         checkAuthSession()
     }
 

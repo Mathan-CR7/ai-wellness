@@ -61,10 +61,12 @@ export interface ChallengeResponse {
   id: number;
   title: string;
   description: string;
-  challengeType?: string;
-  targetSteps: number;
+  targetType?: string;
+  targetValue?: number;
+  targetSteps?: number;
   startDate: string;
   endDate: string;
+  createdBy?: number;
   createdByUserId?: number;
   isParticipant?: boolean;
   totalParticipants?: number;

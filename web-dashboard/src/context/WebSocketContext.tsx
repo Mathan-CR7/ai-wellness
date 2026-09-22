@@ -11,6 +11,7 @@ interface WebSocketContextType {
   markAsRead: (id: string) => void;
   clearAll: () => void;
   dismissAiSuggestion: () => void;
+  simulateInactivityDemo: () => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
@@ -78,6 +79,28 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const dismissAiSuggestion = () => setLatestAiSuggestion(null);
 
+  const simulateInactivityDemo = () => {
+    const demoData: InactivitySuggestionMessage = {
+      userId: user?.id || 1,
+      userEmail: user?.email || 'user@wellness.app',
+      suggestion: "Spring AI Alert: You've been sitting inactive for 2 hours and 15 minutes! Stand up, walk for 5 minutes, and perform light shoulder and neck stretches.",
+      inactivityMinutes: 135,
+      currentSteps: 3902,
+      timestamp: new Date().toISOString(),
+    };
+    setLatestAiSuggestion(demoData);
+
+    const newNotif: NotificationItem = {
+      id: `inactivity-demo-${Date.now()}`,
+      type: 'inactivity',
+      title: 'Spring AI Movement Alert (Demo)',
+      message: demoData.suggestion,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+  };
+
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
@@ -90,6 +113,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         markAsRead,
         clearAll,
         dismissAiSuggestion,
+        simulateInactivityDemo,
       }}
     >
       {children}

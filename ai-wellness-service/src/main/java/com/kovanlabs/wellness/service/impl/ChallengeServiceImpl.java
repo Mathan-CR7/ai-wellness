@@ -244,9 +244,11 @@ public class ChallengeServiceImpl implements ChallengeService {
     }
 
     @Override
-    public void recalculateAndBroadcastLeaderboards(Long userId) {
+    public void recalculateAndBroadcastLeaderboards(Long userId)
+    {
         List<ChallengeMemberEntity> memberships = challengeMemberRepository.findByUserId(userId);
-        for (ChallengeMemberEntity m : memberships) {
+        for (ChallengeMemberEntity m : memberships)
+        {
             recalculateAndBroadcastChallengeLeaderboard(m.getChallengeId());
         }
     }

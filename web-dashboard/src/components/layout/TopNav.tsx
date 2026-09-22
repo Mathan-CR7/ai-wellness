@@ -8,7 +8,7 @@ import { NotificationDrawer } from './NotificationDrawer';
 export const TopNav: React.FC = () => {
   const { user, logout } = useAuth();
   const { theme, setTheme, isDark } = useTheme();
-  const { isConnected, unreadCount } = useWebSocket();
+  const { isConnected, unreadCount, simulateInactivityDemo } = useWebSocket();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -18,13 +18,22 @@ export const TopNav: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-20 h-16 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-4 md:px-6 flex items-center justify-between">
-      {/* Left: WebSocket / Real-time Status Badge */}
+      {/* Left: WebSocket / Real-time Status Badge & Demo AI Alert Button */}
       <div className="flex items-center space-x-3">
         <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300">
           <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
           <Wifi className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">{isConnected ? 'Live Sync Active' : 'Connecting Broker...'}</span>
         </div>
+
+        <button
+          onClick={simulateInactivityDemo}
+          className="px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold transition-all flex items-center space-x-1.5 shadow-xs"
+          title="Simulate Inactivity AI Alert Notification Demo"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+          <span className="hidden md:inline">Demo AI Alert</span>
+        </button>
       </div>
 
       {/* Right Actions */}

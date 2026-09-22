@@ -4,6 +4,7 @@ import { AIChatResponse } from '../types';
 export const aiService = {
   chat: async (message: string, conversationId?: number): Promise<AIChatResponse> => {
     const response = await apiClient.post<AIChatResponse>('/api/ai/chat', {
+      prompt: message,
       message,
       conversationId,
     });

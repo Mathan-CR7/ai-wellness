@@ -243,7 +243,73 @@
                             android:text="Take a 5-minute walk and try some light shoulder rotations!"
                             android:textSize="14sp"
                             android:textColor="#3E2723"
-                            android:lineSpacingExtra="2dp"/>
+                            android:lineSpacingExtra="2dp"
+                            android:layout_marginBottom="10dp"/>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Try this guided routine:"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textColor="#795548"
+                            android:layout_marginBottom="6dp"/>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="🚶 5m Walk"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:gravity="center"
+                                android:background="#FFE0B2"
+                                android:padding="6dp"
+                                android:textColor="#E65100"/>
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="🙆 Shoulder"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:gravity="center"
+                                android:background="#FFE0B2"
+                                android:padding="6dp"
+                                android:layout_marginStart="4dp"
+                                android:textColor="#E65100"/>
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="🧘 Neck"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:gravity="center"
+                                android:background="#FFE0B2"
+                                android:padding="6dp"
+                                android:layout_marginStart="4dp"
+                                android:textColor="#E65100"/>
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/startBreakButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="🌿 START GUIDED MOVEMENT BREAK"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:backgroundTint="#E65100"
+                            android:textColor="#FFFFFF"
+                            android:padding="10dp"/>
                     </LinearLayout>
 
                     <!-- Main Step Progress Ring Card -->

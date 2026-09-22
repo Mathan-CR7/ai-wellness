@@ -14,7 +14,13 @@ export const exerciseService = {
     notes?: string;
     loggedAt?: string;
   }): Promise<ExerciseResponse> => {
-    const response = await apiClient.post<ExerciseResponse>('/api/exercises', data);
+    const payload = {
+      exerciseType: data.exerciseType,
+      durationMinutes: Number(data.durationMinutes),
+      caloriesBurned: Number(data.caloriesBurned),
+      timestamp: data.loggedAt || new Date().toISOString(),
+    };
+    const response = await apiClient.post<ExerciseResponse>('/api/exercises', payload);
     return response.data;
   },
 };

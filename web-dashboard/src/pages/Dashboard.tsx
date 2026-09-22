@@ -33,6 +33,16 @@ export const Dashboard: React.FC = () => {
     refetchInterval: 10000,
   });
 
+  const { data: activitySummary } = useQuery({
+    queryKey: ['activitySummaryToday'],
+    queryFn: () => {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      return activityService.getActivitySummary(startOfDay, now.toISOString());
+    },
+    refetchInterval: 10000,
+  });
+
   const { data: trends } = useQuery({
     queryKey: ['activityTrends'],
     queryFn: () => activityService.getActivityTrends(),
@@ -60,8 +70,17 @@ export const Dashboard: React.FC = () => {
   const steps = todaySteps?.steps || 0;
   const goal = todaySteps?.goal || user?.dailyStepGoal || 10000;
   const progressPercent = Math.min(Math.round((steps / goal) * 100), 100);
-  const distanceKm = (steps * 0.00075).toFixed(2);
-  const caloriesBurned = Math.round(steps * 0.04);
+
+  // Use genuine Health Connect synced metrics from backend activity summary, fallback to step formula if no sync
+  const distanceKm =
+    activitySummary?.totalDistanceMeters && activitySummary.totalDistanceMeters > 0
+      ? (activitySummary.totalDistanceMeters / 1000).toFixed(2)
+      : (steps * 0.00075).toFixed(2);
+
+  const caloriesBurned =
+    activitySummary?.totalCaloriesBurned && activitySummary.totalCaloriesBurned > 0
+      ? Math.round(activitySummary.totalCaloriesBurned)
+      : Math.round(steps * 0.04);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -206,11 +225,19 @@ export const Dashboard: React.FC = () => {
                 <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">
                   {challenges[0].description}
                 </p>
-                <Progress value={steps} max={challenges[0].targetSteps} variant="warning" className="h-3" />
-                <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-                  <span>{steps.toLocaleString()} / {challenges[0].targetSteps.toLocaleString()} steps</span>
-                  <span>{Math.min(Math.round((steps / challenges[0].targetSteps) * 100), 100)}%</span>
-                </div>
+                {(() => {
+                  const target = challenges[0].targetValue || challenges[0].targetSteps || 10000;
+                  const pct = Math.min(Math.round((steps / target) * 100), 100);
+                  return (
+                    <>
+                      <Progress value={steps} max={target} variant="warning" className="h-3" />
+                      <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+                        <span>{steps.toLocaleString()} / {target.toLocaleString()} steps</span>
+                        <span>{pct}%</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           ) : (

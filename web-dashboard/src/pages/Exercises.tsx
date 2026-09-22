@@ -12,10 +12,11 @@ export const ExercisesPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [exerciseType, setExerciseType] = useState('Brisk Walking');
+  const [exerciseType, setExerciseType] = useState('WALKING');
   const [durationMinutes, setDurationMinutes] = useState(30);
   const [caloriesBurned, setCaloriesBurned] = useState(150);
   const [notes, setNotes] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const { data: exercises, isLoading } = useQuery({
     queryKey: ['myExercises'],
@@ -28,11 +29,17 @@ export const ExercisesPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['myExercises'] });
       setIsModalOpen(false);
       setNotes('');
+      setErrorMessage('');
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to log exercise session.';
+      setErrorMessage(msg);
     },
   });
 
   const handleLog = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
     logMutation.mutate({
       exerciseType,
       durationMinutes: Number(durationMinutes),
@@ -105,6 +112,11 @@ export const ExercisesPage: React.FC = () => {
 
       {/* Log Workout Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Log Workout Session">
+        {errorMessage && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs font-semibold">
+            ⚠️ {errorMessage}
+          </div>
+        )}
         <form onSubmit={handleLog} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
@@ -115,12 +127,14 @@ export const ExercisesPage: React.FC = () => {
               onChange={(e) => setExerciseType(e.target.value)}
               className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-sm px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
-              <option value="Brisk Walking">Brisk Walking</option>
-              <option value="Running">Running</option>
-              <option value="Cycling">Cycling</option>
-              <option value="Strength Training">Strength Training</option>
-              <option value="Yoga & Stretching">Yoga & Stretching</option>
-              <option value="HIIT Workout">HIIT Workout</option>
+              <option value="WALKING">Walking / Brisk Walking</option>
+              <option value="RUNNING">Running / Jogging</option>
+              <option value="CYCLING">Cycling</option>
+              <option value="SWIMMING">Swimming</option>
+              <option value="YOGA">Yoga & Stretching</option>
+              <option value="STRENGTH_TRAINING">Strength Training</option>
+              <option value="HIIT">HIIT Workout</option>
+              <option value="OTHER">Other Activity</option>
             </select>
           </div>
 

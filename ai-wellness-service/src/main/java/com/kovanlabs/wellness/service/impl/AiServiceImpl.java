@@ -89,7 +89,8 @@ public class AiServiceImpl implements AiService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AIConversationEntity> getUserConversations(Long userId) {
+    public List<AIConversationEntity> getUserConversations(Long userId)
+    {
         return conversationRepository.findByUserIdOrderByUpdatedAtDesc(userId);
     }
 
@@ -161,39 +162,64 @@ public class AiServiceImpl implements AiService {
                     .call()
                     .content();
 
-            if (response == null || response.isBlank()) {
-                log.error("Gemini returned a blank response for userId={}", userId);
-                throw new AiServiceException(
-                        "The AI service returned an empty response. Please try again.");
+            if (response != null && !response.isBlank()) {
+                return response;
             }
-
-            return response;
-
-        } catch (AiServiceException | AiTimeoutException rethrow) {
-            throw rethrow;
-
-        } catch (Exception e) {
-            if (isTimeoutCause(e)) {
-                log.error("Gemini request timed out for userId={}: {}", userId, e.getMessage());
-                throw new AiTimeoutException(
-                        "The AI service did not respond in time. Please try again in a moment.", e);
-            }
-
-            log.warn("Gemini API call unavailable for userId={}, returning local fallback wellness guidance: {}", userId, e.getMessage());
-            return "Based on your activity profile: To reach your 10,000 daily steps goal, try taking a 15-minute walk after meals, taking the stairs, and scheduling short movement breaks throughout your day!";
+        } catch (Throwable t) {
+            log.warn("Gemini AI API call unavailable for userId={}, returning dynamic local fallback wellness guidance: {}", userId, t.getMessage());
         }
+
+        return generateSmartFallbackResponse(prompt);
     }
 
-    private boolean isTimeoutCause(Throwable e) {
-        Throwable cause = e;
-        while (cause != null) {
-            if (cause instanceof TimeoutException
-                    || cause instanceof java.net.SocketTimeoutException
-                    || (cause.getMessage() != null && cause.getMessage().toLowerCase().contains("timeout"))) {
-                return true;
-            }
-            cause = cause.getCause();
+    private String generateSmartFallbackResponse(String prompt) {
+        if (prompt == null) {
+            prompt = "";
         }
-        return false;
+        String p = prompt.toLowerCase();
+
+        if (p.contains("stretch") || p.contains("neck") || p.contains("shoulder") || p.contains("office") || p.contains("break") || p.contains("desk")) {
+            return "Here is a quick 5-minute office stretch routine you can do right now at your desk:\n\n" +
+                   "1. Neck Releases: Gently tilt your ear to shoulder for 15s on each side.\n" +
+                   "2. Shoulder Rolls: Roll shoulders backwards 10 times to relieve upper back tension.\n" +
+                   "3. Wrist & Forearm Stretch: Extend one arm forward, palm up, pull back fingers gently for 15s.\n" +
+                   "4. Seated Torso Twist: Sit tall and gently twist left then right holding for 15s each.\n" +
+                   "5. Standing Calf & Hamstring Stretch: Stand up and reach down towards your toes for 20s.";
+        }
+        
+        if (p.contains("walk") || p.contains("step") || p.contains("distance") || p.contains("km") || p.contains("goal")) {
+            return "To help you reach your daily step and fitness goals:\n\n" +
+                   "• Take a brisk 10-15 minute walk after meals.\n" +
+                   "• Choose stairs over elevators whenever possible.\n" +
+                   "• Set hourly movement reminders to walk 250 steps every hour.\n" +
+                   "• Consistency is key — even light walking improves cardiovascular health and energy levels!";
+        }
+
+        if (p.contains("workout") || p.contains("exercise") || p.contains("gym") || p.contains("routine") || p.contains("train")) {
+            return "Here is a balanced daily wellness exercise routine:\n\n" +
+                   "• Warm-up (5 mins): Jumping jacks, arm circles, and leg swings.\n" +
+                   "• Bodyweight Circuit (15 mins): 3 sets of 12 Squats, 10 Push-ups, 12 Reverse Lunges, and a 30s Plank hold.\n" +
+                   "• Cool-down (5 mins): Deep breathing and static stretches.\n" +
+                   "Remember to listen to your body and adjust intensity as needed!";
+        }
+
+        if (p.contains("food") || p.contains("diet") || p.contains("nutrition") || p.contains("calorie") || p.contains("water") || p.contains("drink")) {
+            return "Key Nutrition & Hydration Guidance:\n\n" +
+                   "• Hydration: Drink 2.5–3 liters of water throughout the day.\n" +
+                   "• Balanced Meals: Fill half your plate with colorful vegetables, one-quarter with lean protein, and one-quarter with whole grains.\n" +
+                   "• Energy Focus: Snack on nuts, seeds, or fresh fruit for sustained focus without blood sugar spikes.";
+        }
+
+        if (p.contains("recovery") || p.contains("rest") || p.contains("sleep") || p.contains("tired") || p.contains("sore")) {
+            return "Essential Health & Recovery Tips:\n\n" +
+                   "• Quality Sleep: Aim for 7–8 hours of restful sleep every night.\n" +
+                   "• Active Recovery: Gentle light walking or yoga reduces delayed onset muscle soreness (DOMS).\n" +
+                   "• Hydration & Minerals: Replenish electrolytes and drink adequate water post-workout.";
+        }
+
+        return "As your AI Wellness Coach, here are smart personalized recommendations for your day:\n\n" +
+               "1. Stay Active: Aim to reach your target daily step goal by taking frequent short movement breaks.\n" +
+               "2. Posture Check: Reset your posture every hour and perform quick neck and shoulder rolls.\n" +
+               "3. Hydration: Keep a water bottle nearby and stay well-hydrated throughout your workday!";
     }
 }

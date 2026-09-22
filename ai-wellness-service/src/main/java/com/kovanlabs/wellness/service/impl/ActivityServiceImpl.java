@@ -205,10 +205,10 @@ public class ActivityServiceImpl implements ActivityService {
         }
 
         List<ActivityEntity> activities = activityProvider.findByUserId(userId);
-        if (activities.isEmpty()) {
+        if (activities.isEmpty())
+        {
             throw new ActivityDataNotAvailableException("No activity data available to compute trends for user: " + userId);
         }
-
         return activityTrendCalculator.calculate7DayTrend(userId, activities, Instant.now());
     }
 }

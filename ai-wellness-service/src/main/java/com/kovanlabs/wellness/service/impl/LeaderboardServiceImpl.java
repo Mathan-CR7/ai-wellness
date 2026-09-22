@@ -101,3 +101,4 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                 .build();
     }
 }
+

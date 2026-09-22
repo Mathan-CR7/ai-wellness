@@ -71,7 +71,6 @@ public class StepServiceImpl implements StepService
 
         DailyStepEntity savedEntity = dailyStepRepository.save(entity);
 
-        // Register step sync with InactivityDetectionService to evaluate physical movement and reset inactivity state
         try {
             inactivityDetectionService.registerStepSync(userId, steps);
         } catch (Exception e) {

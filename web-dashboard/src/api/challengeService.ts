@@ -24,7 +24,25 @@ export const challengeService = {
     startDate: string;
     endDate: string;
   }): Promise<ChallengeResponse> => {
-    const response = await apiClient.post<ChallengeResponse>('/api/challenges', data);
+    // Format start and end date to ISO Instant format expected by Spring Boot
+    const startIso = data.startDate.includes('T')
+      ? new Date(data.startDate).toISOString()
+      : new Date(`${data.startDate}T00:00:00Z`).toISOString();
+      
+    const endIso = data.endDate.includes('T')
+      ? new Date(data.endDate).toISOString()
+      : new Date(`${data.endDate}T23:59:59Z`).toISOString();
+
+    const payload = {
+      title: data.title,
+      description: data.description,
+      targetType: 'STEPS',
+      targetValue: Number(data.targetSteps),
+      startDate: startIso,
+      endDate: endIso,
+    };
+
+    const response = await apiClient.post<ChallengeResponse>('/api/challenges', payload);
     return response.data;
   },
 

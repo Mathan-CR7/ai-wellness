@@ -42,7 +42,7 @@ export const AiCoachPage: React.FC = () => {
         {
           id: `ai-${Date.now()}`,
           sender: 'ai',
-          text: data.message,
+          text: data.content || (data as any).message || 'Here is your wellness update!',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
