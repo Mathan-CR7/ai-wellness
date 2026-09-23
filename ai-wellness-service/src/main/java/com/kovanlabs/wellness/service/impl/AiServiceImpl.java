@@ -5,13 +5,19 @@ import com.kovanlabs.wellness.dto.ai.AIChatRequest;
 import com.kovanlabs.wellness.dto.ai.AIChatResponse;
 import com.kovanlabs.wellness.entity.AIConversationEntity;
 import com.kovanlabs.wellness.entity.AIMessageEntity;
+import com.kovanlabs.wellness.entity.DailyStepEntity;
+import com.kovanlabs.wellness.entity.UserActivityStateEntity;
+import com.kovanlabs.wellness.entity.UserEntity;
 import com.kovanlabs.wellness.entity.enums.MessageSender;
 import com.kovanlabs.wellness.exception.AiServiceException;
 import com.kovanlabs.wellness.exception.AiTimeoutException;
 import com.kovanlabs.wellness.exception.ResourceNotFoundException;
 import com.kovanlabs.wellness.exception.UnauthorizedException;
+import com.kovanlabs.wellness.provider.UserProvider;
 import com.kovanlabs.wellness.repository.AIConversationRepository;
 import com.kovanlabs.wellness.repository.AIMessageRepository;
+import com.kovanlabs.wellness.repository.DailyStepRepository;
+import com.kovanlabs.wellness.repository.UserActivityStateRepository;
 import com.kovanlabs.wellness.service.AiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +25,9 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -31,17 +40,26 @@ public class AiServiceImpl implements AiService {
     private final AIMessageRepository messageRepository;
     private final AppProperties appProperties;
     private final ChatClient.Builder chatClientBuilder;
+    private final UserProvider userProvider;
+    private final DailyStepRepository dailyStepRepository;
+    private final UserActivityStateRepository userActivityStateRepository;
 
     public AiServiceImpl(
             AIConversationRepository conversationRepository,
             AIMessageRepository messageRepository,
             AppProperties appProperties,
-            ChatClient.Builder chatClientBuilder
+            ChatClient.Builder chatClientBuilder,
+            UserProvider userProvider,
+            DailyStepRepository dailyStepRepository,
+            UserActivityStateRepository userActivityStateRepository
     ) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.appProperties = appProperties;
         this.chatClientBuilder = chatClientBuilder;
+        this.userProvider = userProvider;
+        this.dailyStepRepository = dailyStepRepository;
+        this.userActivityStateRepository = userActivityStateRepository;
     }
 
     @Override
@@ -169,57 +187,118 @@ public class AiServiceImpl implements AiService {
             log.warn("Gemini AI API call unavailable for userId={}, returning dynamic local fallback wellness guidance: {}", userId, t.getMessage());
         }
 
-        return generateSmartFallbackResponse(prompt);
+        return generateSmartFallbackResponse(userId, prompt);
     }
 
-    private String generateSmartFallbackResponse(String prompt) {
-        if (prompt == null) {
-            prompt = "";
+    private String generateSmartFallbackResponse(Long userId, String prompt) {
+        String userName = "Athlete";
+        long targetGoal = 10000L;
+        long todaySteps = 0L;
+        long inactivityMinutes = 0L;
+
+        try {
+            if (userProvider != null && userId != null) {
+                UserEntity u = userProvider.findById(userId).orElse(null);
+                if (u != null) {
+                    if (u.getFullName() != null && !u.getFullName().isBlank()) {
+                        userName = u.getFullName();
+                    }
+                }
+            }
+            if (dailyStepRepository != null && userId != null) {
+                DailyStepEntity ds = dailyStepRepository.findByUserIdAndDate(userId, LocalDate.now()).orElse(null);
+                if (ds != null && ds.getSteps() != null) {
+                    todaySteps = ds.getSteps();
+                }
+            }
+            if (userActivityStateRepository != null && userId != null) {
+                UserActivityStateEntity state = userActivityStateRepository.findByUserId(userId).orElse(null);
+                if (state != null && state.getLastActivityTime() != null) {
+                    inactivityMinutes = Duration.between(state.getLastActivityTime(), Instant.now()).toMinutes();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error fetching live user metrics for AI dynamic response for userId={}: {}", userId, e.getMessage());
         }
-        String p = prompt.toLowerCase();
+
+        double distanceKm = todaySteps * 0.000762;
+        double caloriesBurned = todaySteps * 0.04;
+        long remainingSteps = Math.max(0, targetGoal - todaySteps);
+        int progressPct = targetGoal > 0 ? (int) ((todaySteps * 100) / targetGoal) : 0;
+
+        String p = (prompt != null) ? prompt.toLowerCase() : "";
 
         if (p.contains("stretch") || p.contains("neck") || p.contains("shoulder") || p.contains("office") || p.contains("break") || p.contains("desk")) {
-            return "Here is a quick 5-minute office stretch routine you can do right now at your desk:\n\n" +
-                   "1. Neck Releases: Gently tilt your ear to shoulder for 15s on each side.\n" +
-                   "2. Shoulder Rolls: Roll shoulders backwards 10 times to relieve upper back tension.\n" +
-                   "3. Wrist & Forearm Stretch: Extend one arm forward, palm up, pull back fingers gently for 15s.\n" +
-                   "4. Seated Torso Twist: Sit tall and gently twist left then right holding for 15s each.\n" +
-                   "5. Standing Calf & Hamstring Stretch: Stand up and reach down towards your toes for 20s.";
-        }
-        
-        if (p.contains("walk") || p.contains("step") || p.contains("distance") || p.contains("km") || p.contains("goal")) {
-            return "To help you reach your daily step and fitness goals:\n\n" +
-                   "• Take a brisk 10-15 minute walk after meals.\n" +
-                   "• Choose stairs over elevators whenever possible.\n" +
-                   "• Set hourly movement reminders to walk 250 steps every hour.\n" +
-                   "• Consistency is key — even light walking improves cardiovascular health and energy levels!";
+            return String.format(
+                "Hello %s! Based on your current Health Connect stats for today:\n\n" +
+                "• Today's Steps: %,d / %,d steps (%d%% completed)\n" +
+                "• Distance: %.2f km | Calories: %.0f kcal\n" +
+                "• Inactivity Duration: %d minutes\n\n" +
+                "Here is a personalized 5-minute movement break routine to relieve desk fatigue:\n" +
+                "1. Neck Releases: Gently tilt your ear to shoulder for 15 seconds on each side.\n" +
+                "2. Shoulder Rotations: Roll shoulders backward 10 times to unlock upper back tension.\n" +
+                "3. Seated Torso Twists: Hold each side for 15 seconds to flex your spine.\n" +
+                "4. Quick Step Walk: Take a 2-minute walk to add ~200 steps toward your %,d remaining steps!",
+                userName, todaySteps, targetGoal, progressPct, distanceKm, caloriesBurned, inactivityMinutes, remainingSteps
+            );
         }
 
-        if (p.contains("workout") || p.contains("exercise") || p.contains("gym") || p.contains("routine") || p.contains("train")) {
-            return "Here is a balanced daily wellness exercise routine:\n\n" +
-                   "• Warm-up (5 mins): Jumping jacks, arm circles, and leg swings.\n" +
-                   "• Bodyweight Circuit (15 mins): 3 sets of 12 Squats, 10 Push-ups, 12 Reverse Lunges, and a 30s Plank hold.\n" +
-                   "• Cool-down (5 mins): Deep breathing and static stretches.\n" +
-                   "Remember to listen to your body and adjust intensity as needed!";
+        if (p.contains("walk") || p.contains("step") || p.contains("distance") || p.contains("km") || p.contains("goal") || p.contains("progress")) {
+            return String.format(
+                "Hi %s! Here is your real-time step activity summary:\n\n" +
+                "• Current Steps Today: %,d steps\n" +
+                "• Target Goal: %,d steps (%,d steps remaining)\n" +
+                "• Goal Completion: %d%%\n" +
+                "• Estimated Distance: %.2f km\n" +
+                "• Calories Burned: %.0f kcal\n\n" +
+                "Coach Advice: To close your remaining %,d steps, schedule a 15-minute brisk walk post-lunch or take the stairs. Every step gets you closer to your daily goal!",
+                userName, todaySteps, targetGoal, remainingSteps, progressPct, distanceKm, caloriesBurned, remainingSteps
+            );
+        }
+
+        if (p.contains("workout") || p.contains("exercise") || p.contains("gym") || p.contains("routine") || p.contains("train") || p.contains("burn")) {
+            return String.format(
+                "Hello %s! Here is a custom workout recommendation for today:\n\n" +
+                "• Daily Step Context: %,d steps (%.2f km, %.0f kcal burned)\n" +
+                "• Remaining Goal: %,d steps\n\n" +
+                "Recommended Exercise Routine:\n" +
+                "1. Warm-up (5 mins): Light arm circles, leg swings, and brisk walking.\n" +
+                "2. Bodyweight Circuit (15 mins): 3 rounds of 12 Bodyweight Squats, 10 Push-ups, and a 30-second Plank hold.\n" +
+                "3. Cool-down (5 mins): Deep breathing and gentle leg stretches.",
+                userName, todaySteps, distanceKm, caloriesBurned, remainingSteps
+            );
         }
 
         if (p.contains("food") || p.contains("diet") || p.contains("nutrition") || p.contains("calorie") || p.contains("water") || p.contains("drink")) {
-            return "Key Nutrition & Hydration Guidance:\n\n" +
-                   "• Hydration: Drink 2.5–3 liters of water throughout the day.\n" +
-                   "• Balanced Meals: Fill half your plate with colorful vegetables, one-quarter with lean protein, and one-quarter with whole grains.\n" +
-                   "• Energy Focus: Snack on nuts, seeds, or fresh fruit for sustained focus without blood sugar spikes.";
+            return String.format(
+                "Hi %s! Personal Nutrition & Energy Guidance:\n\n" +
+                "• Active Energy Spent Today: ~%.0f kcal across %,d steps (%.2f km)\n" +
+                "• Hydration Target: Aim for 2.5–3.0 liters of water today.\n" +
+                "• Fueling Tip: Pair lean proteins with complex carbohydrates post-walk to replenish muscle glycogen and sustain your energy levels!",
+                userName, caloriesBurned, todaySteps, distanceKm
+            );
         }
 
         if (p.contains("recovery") || p.contains("rest") || p.contains("sleep") || p.contains("tired") || p.contains("sore")) {
-            return "Essential Health & Recovery Tips:\n\n" +
-                   "• Quality Sleep: Aim for 7–8 hours of restful sleep every night.\n" +
-                   "• Active Recovery: Gentle light walking or yoga reduces delayed onset muscle soreness (DOMS).\n" +
-                   "• Hydration & Minerals: Replenish electrolytes and drink adequate water post-workout.";
+            return String.format(
+                "Hello %s! Personal Recovery & Wellness Analysis:\n\n" +
+                "• Today's Accumulated Activity: %,d steps (%.2f km)\n" +
+                "• Sedentary Status: %d minutes since last active movement\n\n" +
+                "Recovery Recommendations:\n" +
+                "1. Prioritize 7–8 hours of restful sleep tonight.\n" +
+                "2. Perform light static leg and calf stretching to relieve muscle tightness.\n" +
+                "3. Stay hydrated to optimize metabolic recovery!",
+                userName, todaySteps, distanceKm, inactivityMinutes
+            );
         }
 
-        return "As your AI Wellness Coach, here are smart personalized recommendations for your day:\n\n" +
-               "1. Stay Active: Aim to reach your target daily step goal by taking frequent short movement breaks.\n" +
-               "2. Posture Check: Reset your posture every hour and perform quick neck and shoulder rolls.\n" +
-               "3. Hydration: Keep a water bottle nearby and stay well-hydrated throughout your workday!";
+        return String.format(
+            "Hello %s! As your AI Wellness Coach, here is your personalized daily update:\n\n" +
+            "• Daily Step Goal: %,d / %,d steps (%d%% completed)\n" +
+            "• Distance Covered: %.2f km | Active Calories: %.0f kcal\n" +
+            "• Steps Remaining: %,d steps\n\n" +
+            "Recommended Action: Take short 5-minute movement breaks throughout your day to hit your step target and boost your physical wellness!",
+            userName, todaySteps, targetGoal, progressPct, distanceKm, caloriesBurned, remainingSteps
+        );
     }
 }
