@@ -16,12 +16,12 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'https://ai-wellness-jt1d.onrender.com',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
       },
       '/ws': {
-        target: 'https://ai-wellness-jt1d.onrender.com',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:8080',
         ws: true,
         changeOrigin: true,
         secure: false,
