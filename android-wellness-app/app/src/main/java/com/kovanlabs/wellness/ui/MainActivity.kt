@@ -206,7 +206,7 @@ class MainActivity : AppCompatActivity() {
 
         // Start Break Listener
         findViewById<Button>(R.id.startBreakButton)?.setOnClickListener {
-            Toast.makeText(this, "🌿 Guided Movement Break Started! Perform 5-min walk & stretches.", Toast.LENGTH_LONG).show()
+            showGuidedMovementBreakDialog()
         }
 
         checkAuthSession()
@@ -695,6 +695,85 @@ class MainActivity : AppCompatActivity() {
             }
             else -> {}
         }
+    }
+
+    private fun showGuidedMovementBreakDialog() {
+        val context = this
+        val dialogView = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 48, 48, 48)
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
+        }
+
+        val titleTv = TextView(context).apply {
+            text = "🌿 5-Minute Guided Movement Break"
+            textSize = 18f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.parseColor("#1B5E20"))
+            setPadding(0, 0, 0, 16)
+        }
+
+        val timerTv = TextView(context).apply {
+            text = "05:00"
+            textSize = 36f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.parseColor("#E65100"))
+            gravity = Gravity.CENTER
+            setPadding(0, 12, 0, 24)
+        }
+
+        val descTv = TextView(context).apply {
+            text = "Perform these 4 guided exercises to reduce desk stiffness & boost blood circulation:\n\n" +
+                   "1. 🚶 Brisk Walking Stride (2 mins) — Walk 200+ steps to reactivate lower body muscles.\n\n" +
+                   "2. 🙆 Shoulder Rotations (1 min) — Roll shoulders backward 10 times to unlock upper back tension.\n\n" +
+                   "3. 🧘 Neck Flex Releases (1 min) — Gently tilt ear to shoulder holding 15s each side.\n\n" +
+                   "4. 🧍 Side Torso Stretch (1 min) — Reach overhead and flex lateral torso."
+            textSize = 13f
+            setTextColor(Color.parseColor("#333333"))
+            setLineSpacing(4f, 1f)
+            setPadding(0, 0, 0, 24)
+        }
+
+        val closeBtn = Button(context).apply {
+            text = "COMPLETE BREAK"
+            setBackgroundColor(Color.parseColor("#2E7D32"))
+            setTextColor(Color.WHITE)
+            setTypeface(null, Typeface.BOLD)
+        }
+
+        dialogView.addView(titleTv)
+        dialogView.addView(timerTv)
+        dialogView.addView(descTv)
+        dialogView.addView(closeBtn)
+
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(context)
+            .setView(dialogView)
+            .create()
+
+        var secondsLeft = 300
+        val timerJob = lifecycleScope.launch {
+            while (secondsLeft > 0 && isActive) {
+                val m = secondsLeft / 60
+                val s = secondsLeft % 60
+                timerTv.text = "%02d:%02d".format(m, s)
+                delay(1000L)
+                secondsLeft--
+            }
+            if (secondsLeft == 0) {
+                timerTv.text = "00:00 (Break Complete! 🎉)"
+            }
+        }
+
+        closeBtn.setOnClickListener {
+            timerJob.cancel()
+            dialog.dismiss()
+        }
+
+        dialog.setOnDismissListener {
+            timerJob.cancel()
+        }
+
+        dialog.show()
     }
 
     private fun getApiService(): WellnessApiService {
