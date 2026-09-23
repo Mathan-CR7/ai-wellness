@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { teamService } from '../api/teamService';
+import { TeamResponse } from '../types';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
-import { Users, Plus, Key, ShieldCheck, UserCheck } from 'lucide-react';
+import { TeamDetailModal } from '../components/teams/TeamDetailModal';
+import { Users, Plus, Key, ShieldCheck, UserCheck, ChevronRight } from 'lucide-react';
 
 export const TeamsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isJoinOpen, setIsJoinOpen] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<TeamResponse | null>(null);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -70,7 +73,11 @@ export const TeamsPage: React.FC = () => {
           <p className="text-sm text-slate-400">Loading your teams...</p>
         ) : teams && teams.length > 0 ? (
           teams.map((t) => (
-            <Card key={t.id} className="p-6 flex flex-col justify-between">
+            <Card
+              key={t.id}
+              onClick={() => setSelectedTeam(t)}
+              className="p-6 flex flex-col justify-between cursor-pointer hover:border-brand-500 hover:shadow-lg transition-all group"
+            >
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <Badge variant="brand">
@@ -81,9 +88,12 @@ export const TeamsPage: React.FC = () => {
                   </span>
                 </div>
 
-                <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 mb-1">
-                  {t.name}
-                </h3>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                    {t.name}
+                  </h3>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-brand-500 group-hover:translate-x-1 transition-all" />
+                </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mb-4">
                   {t.description || 'Social fitness squad for step challenges and activity tracking.'}
                 </p>
@@ -91,7 +101,9 @@ export const TeamsPage: React.FC = () => {
 
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
                 <span>Created: {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'Active'}</span>
-                <Badge variant="success">Active Squad</Badge>
+                <span className="text-xs font-bold text-brand-600 dark:text-brand-400 group-hover:underline">
+                  View Squad & Admin →
+                </span>
               </div>
             </Card>
           ))
@@ -101,6 +113,13 @@ export const TeamsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Team Detail & Participants Modal */}
+      <TeamDetailModal
+        team={selectedTeam}
+        isOpen={!!selectedTeam}
+        onClose={() => setSelectedTeam(null)}
+      />
 
       {/* Create Team Modal */}
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Team Squad">

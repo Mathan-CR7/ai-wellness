@@ -115,19 +115,22 @@ export interface TeamResponse {
   name: string;
   description?: string;
   inviteCode: string;
-  ownerUserId: number;
+  ownerId?: number;
+  ownerUserId?: number;
   memberCount: number;
   createdAt?: string;
 }
 
 export interface TeamMemberResponse {
   id: number;
-  teamId: number;
+  teamId?: number;
   userId: number;
-  userFullName: string;
-  userEmail: string;
-  role: string;
-  joinedAt: string;
+  fullName?: string;
+  userFullName?: string;
+  email?: string;
+  userEmail?: string;
+  role?: string;
+  joinedAt?: string;
 }
 
 export interface TeamLeaderboardEntry {
