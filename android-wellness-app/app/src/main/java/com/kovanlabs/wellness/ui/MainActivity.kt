@@ -699,6 +699,41 @@ class MainActivity : AppCompatActivity() {
 
     private fun showGuidedMovementBreakDialog() {
         val context = this
+
+        data class BreakStage(
+            val name: String,
+            val durationSec: Int,
+            val instruction: String,
+            val notice: String
+        )
+
+        val stages = listOf(
+            BreakStage(
+                "Stage 1: 5-Minute Brisk Walk",
+                300,
+                "🚶 Walk 400+ steps to reactivate lower body circulation & boost metabolism.",
+                "🎉 5-Minute Walk Completed! Next Stage: 3-Minute Shoulder Rotations."
+            ),
+            BreakStage(
+                "Stage 2: 3-Minute Shoulder Rotations",
+                180,
+                "🙆 Roll shoulders backward & forward 15 reps to unlock upper back stiffness.",
+                "✅ 3-Minute Shoulder Rotations Completed! Next Stage: 3-Minute Neck Stretches."
+            ),
+            BreakStage(
+                "Stage 3: 3-Minute Neck Release Stretches",
+                180,
+                "🧘 Gently tilt ear to shoulder holding 30 seconds for each side.",
+                "✅ 3-Minute Neck Stretches Completed! Final Stage: 4-Minute Standing Side Torso Stretch."
+            ),
+            BreakStage(
+                "Stage 4: 4-Minute Standing Side Torso Stretch",
+                240,
+                "🧍 Reach overhead with clasped hands & flex lateral torso for core mobility.",
+                "🏆 15-Minute Movement Break Fully Completed! You are refreshed & energized."
+            )
+        )
+
         val dialogView = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 48, 48, 48)
@@ -706,42 +741,47 @@ class MainActivity : AppCompatActivity() {
         }
 
         val titleTv = TextView(context).apply {
-            text = "🌿 5-Minute Guided Movement Break"
-            textSize = 18f
+            text = "🌿 15-Minute Multi-Stage Movement Break"
+            textSize = 17f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.parseColor("#1B5E20"))
-            setPadding(0, 0, 0, 16)
+            setPadding(0, 0, 0, 8)
+        }
+
+        val stageTitleTv = TextView(context).apply {
+            text = stages[0].name
+            textSize = 13f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.parseColor("#6A1B9A"))
+            setPadding(0, 0, 0, 8)
         }
 
         val timerTv = TextView(context).apply {
             text = "05:00"
-            textSize = 36f
+            textSize = 38f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.parseColor("#E65100"))
             gravity = Gravity.CENTER
-            setPadding(0, 12, 0, 24)
+            setPadding(0, 8, 0, 16)
         }
 
         val descTv = TextView(context).apply {
-            text = "Perform these 4 guided exercises to reduce desk stiffness & boost blood circulation:\n\n" +
-                   "1. 🚶 Brisk Walking Stride (2 mins) — Walk 200+ steps to reactivate lower body muscles.\n\n" +
-                   "2. 🙆 Shoulder Rotations (1 min) — Roll shoulders backward 10 times to unlock upper back tension.\n\n" +
-                   "3. 🧘 Neck Flex Releases (1 min) — Gently tilt ear to shoulder holding 15s each side.\n\n" +
-                   "4. 🧍 Side Torso Stretch (1 min) — Reach overhead and flex lateral torso."
+            text = stages[0].instruction
             textSize = 13f
             setTextColor(Color.parseColor("#333333"))
-            setLineSpacing(4f, 1f)
-            setPadding(0, 0, 0, 24)
+            setLineSpacing(3f, 1f)
+            setPadding(0, 0, 0, 20)
         }
 
         val closeBtn = Button(context).apply {
-            text = "COMPLETE BREAK"
+            text = "CLOSE / FINISH BREAK"
             setBackgroundColor(Color.parseColor("#2E7D32"))
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
         }
 
         dialogView.addView(titleTv)
+        dialogView.addView(stageTitleTv)
         dialogView.addView(timerTv)
         dialogView.addView(descTv)
         dialogView.addView(closeBtn)
@@ -750,17 +790,35 @@ class MainActivity : AppCompatActivity() {
             .setView(dialogView)
             .create()
 
-        var secondsLeft = 300
+        var currentStageIdx = 0
+        var secondsLeft = stages[0].durationSec
+
         val timerJob = lifecycleScope.launch {
-            while (secondsLeft > 0 && isActive) {
-                val m = secondsLeft / 60
-                val s = secondsLeft % 60
-                timerTv.text = "%02d:%02d".format(m, s)
-                delay(1000L)
-                secondsLeft--
-            }
-            if (secondsLeft == 0) {
-                timerTv.text = "00:00 (Break Complete! 🎉)"
+            while (isActive) {
+                if (secondsLeft > 0) {
+                    val m = secondsLeft / 60
+                    val s = secondsLeft % 60
+                    timerTv.text = "%02d:%02d".format(m, s)
+                    delay(1000L)
+                    secondsLeft--
+                } else {
+                    // Current stage completed!
+                    val currentStage = stages[currentStageIdx]
+                    Toast.makeText(context, currentStage.notice, Toast.LENGTH_LONG).show()
+
+                    if (currentStageIdx < stages.size - 1) {
+                        currentStageIdx++
+                        val nextStage = stages[currentStageIdx]
+                        stageTitleTv.text = nextStage.name
+                        descTv.text = nextStage.instruction
+                        secondsLeft = nextStage.durationSec
+                    } else {
+                        timerTv.text = "00:00 (15-Min Break Complete! 🎉)"
+                        stageTitleTv.text = "🏆 All 4 Stages Fully Completed!"
+                        descTv.text = "Great job completing your 15-minute movement break routine!"
+                        break
+                    }
+                }
             }
         }
 
