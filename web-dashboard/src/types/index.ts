@@ -51,10 +51,12 @@ export interface ActivitySummaryResponse {
 }
 
 export interface ActivityTrendResponse {
-  sevenDayAverageSteps: number;
-  goalCompletionRatePercentage: number;
-  activeStreakDays: number;
-  activeDaysInPeriod: number;
+  sevenDayAverageSteps?: number;
+  movingAverageSteps7Days?: number;
+  goalCompletionRatePercentage?: number;
+  stepCompletionRatePercent?: number;
+  activeStreakDays?: number;
+  activeDaysInPeriod?: number;
 }
 
 export interface ChallengeResponse {

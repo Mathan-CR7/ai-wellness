@@ -1,5 +1,6 @@
 package com.kovanlabs.wellness.dto.activity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,4 +23,14 @@ public class ActivityTrendResponse {
     private Double totalDistanceWeeklyMeters;
 
     private Double totalCaloriesWeekly;
+
+    @JsonProperty("sevenDayAverageSteps")
+    public Double getSevenDayAverageSteps() {
+        return movingAverageSteps7Days;
+    }
+
+    @JsonProperty("goalCompletionRatePercentage")
+    public Double getGoalCompletionRatePercentage() {
+        return stepCompletionRatePercent;
+    }
 }

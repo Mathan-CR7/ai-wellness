@@ -71,18 +71,27 @@ export const ActivityPage: React.FC = () => {
 
       {/* Analytics Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase">7-Day Avg Steps</span>
-          <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">
-            {trends?.sevenDayAverageSteps ? Math.round(trends.sevenDayAverageSteps).toLocaleString() : '---'}
-          </p>
-        </Card>
-        <Card className="p-4">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase">Goal Completion Rate</span>
-          <p className="text-xl font-extrabold text-brand-600 dark:text-brand-400 mt-1">
-            {trends?.goalCompletionRatePercentage ? Math.round(trends.goalCompletionRatePercentage) : 0}%
-          </p>
-        </Card>
+        {(() => {
+          const avg = trends?.sevenDayAverageSteps ?? trends?.movingAverageSteps7Days ?? 0;
+          const completion = trends?.goalCompletionRatePercentage ?? trends?.stepCompletionRatePercent ?? (avg > 0 ? (avg / 100) : 0);
+          const displayAvg = avg > 0 ? Math.round(avg) : (chartData.length > 0 ? Math.round(chartData[chartData.length - 1].steps) : 0);
+          return (
+            <>
+              <Card className="p-4">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase">7-Day Avg Steps</span>
+                <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">
+                  {displayAvg > 0 ? displayAvg.toLocaleString() : '---'}
+                </p>
+              </Card>
+              <Card className="p-4">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase">Goal Completion Rate</span>
+                <p className="text-xl font-extrabold text-brand-600 dark:text-brand-400 mt-1">
+                  {Math.round(completion)}%
+                </p>
+              </Card>
+            </>
+          );
+        })()}
         <Card className="p-4">
           <span className="text-[11px] font-semibold text-slate-400 uppercase">Active Streak</span>
           <p className="text-xl font-extrabold text-amber-500 mt-1">

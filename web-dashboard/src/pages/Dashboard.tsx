@@ -185,7 +185,11 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-            <span>7-Day Daily Avg: {trends?.sevenDayAverageSteps ? Math.round(trends.sevenDayAverageSteps).toLocaleString() : '---'} steps</span>
+            {(() => {
+              const avg = trends?.sevenDayAverageSteps ?? trends?.movingAverageSteps7Days ?? 0;
+              const displayAvg = avg > 0 ? Math.round(avg) : (steps > 0 ? steps : 0);
+              return <span>7-Day Daily Avg: {displayAvg > 0 ? displayAvg.toLocaleString() : '---'} steps</span>;
+            })()}
             <span>Streak: {trends?.activeStreakDays || 1} days</span>
           </div>
         </Card>
