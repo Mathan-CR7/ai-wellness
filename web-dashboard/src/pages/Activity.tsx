@@ -26,18 +26,24 @@ export const ActivityPage: React.FC = () => {
     queryFn: () => activityService.getMyActivities(),
   });
 
-  const { data: trends } = useQuery({
-    queryKey: ['activityTrends'],
-    queryFn: () => activityService.getActivityTrends(),
+  const { data: todaySteps } = useQuery({
+    queryKey: ['todaySteps'],
+    queryFn: () => activityService.getTodaySteps(),
   });
 
-  // Prepare chart data safely from real activity history
-  const chartData = (activities || []).slice(0, 14).map((a) => ({
+  // Prepare chart data safely from real activity history or fallback to today's step count
+  const rawChartData = (activities || []).slice(0, 14).map((a) => ({
     date: new Date(a.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' }),
     steps: a.stepCount,
     calories: a.caloriesBurned,
     distanceKm: parseFloat((a.distanceMeters / 1000).toFixed(2)),
   })).reverse();
+
+  const chartData = rawChartData.length > 0 
+    ? rawChartData 
+    : (todaySteps?.steps && todaySteps.steps > 0 
+        ? [{ date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }), steps: todaySteps.steps, calories: Math.round(todaySteps.steps * 0.04), distanceKm: parseFloat((todaySteps.steps * 0.00075).toFixed(2)) }]
+        : []);
 
   return (
     <div className="space-y-8 animate-fade-in">
