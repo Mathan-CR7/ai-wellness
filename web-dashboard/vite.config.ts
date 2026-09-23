@@ -19,6 +19,13 @@ export default defineConfig({
         target: process.env.VITE_BACKEND_URL || 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
+        onError: (err, _req, res) => {
+          console.warn('[Vite Proxy Warning] Local backend (localhost:8080) unreachable. Ensure Spring Boot is running in IntelliJ IDEA.');
+          if (!res.headersSent) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Local backend service unavailable on port 8080. Please start WellnessApplication in IntelliJ IDEA.' }));
+          }
+        },
       },
       '/ws': {
         target: process.env.VITE_BACKEND_URL || 'http://localhost:8080',
