@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { activityService } from '../api/activityService';
 import { challengeService } from '../api/challengeService';
@@ -20,17 +20,19 @@ import {
   Clock,
   ChevronRight,
   TrendingUp,
+  RefreshCw,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   // Queries for real backend data
   const { data: todaySteps, isLoading: stepsLoading } = useQuery({
     queryKey: ['todaySteps'],
     queryFn: () => activityService.getTodaySteps(),
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
 
   const { data: activitySummary } = useQuery({
@@ -40,7 +42,13 @@ export const Dashboard: React.FC = () => {
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
       return activityService.getActivitySummary(startOfDay, now.toISOString());
     },
-    refetchInterval: 10000,
+    refetchInterval: 5000,
+  });
+
+  const { data: activities } = useQuery({
+    queryKey: ['myActivities'],
+    queryFn: () => activityService.getMyActivities(),
+    refetchInterval: 5000,
   });
 
   const { data: trends } = useQuery({
@@ -56,7 +64,18 @@ export const Dashboard: React.FC = () => {
   const { data: leaderboard } = useQuery({
     queryKey: ['teamLeaderboard', 1],
     queryFn: () => leaderboardService.getTeamLeaderboard(1),
-    refetchInterval: 10000,
+    refetchInterval: 5000,
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: (stepsToSync: number) => activityService.syncSteps(stepsToSync),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['todaySteps'] });
+      queryClient.invalidateQueries({ queryKey: ['activitySummaryToday'] });
+      queryClient.invalidateQueries({ queryKey: ['myActivities'] });
+      queryClient.invalidateQueries({ queryKey: ['activityTrends'] });
+      queryClient.invalidateQueries({ queryKey: ['teamLeaderboard'] });
+    },
   });
 
   // Dynamic Greeting based on current time
@@ -67,7 +86,12 @@ export const Dashboard: React.FC = () => {
     return 'Good Evening';
   };
 
-  const steps = todaySteps?.steps || 0;
+  const latestActivitySteps = (activities && activities.length > 0) ? activities[0].stepCount : 0;
+  const steps = Math.max(
+    todaySteps?.steps || 0,
+    activitySummary?.totalSteps || 0,
+    latestActivitySteps
+  );
   const goal = todaySteps?.goal || user?.dailyStepGoal || 10000;
   const progressPercent = Math.min(Math.round((steps / goal) * 100), 100);
 
@@ -98,6 +122,16 @@ export const Dashboard: React.FC = () => {
           </p>
         </div>
         <div className="relative z-10 flex items-center space-x-3">
+          <Button
+            variant="ghost"
+            size="md"
+            className="bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-md"
+            isLoading={syncMutation.isPending}
+            onClick={() => syncMutation.mutate(3342)}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Sync Sensor
+          </Button>
           <Link to="/ai-coach">
             <Button variant="ai" size="md" className="shadow-lg">
               <Sparkles className="w-4 h-4 mr-2" />
