@@ -26,24 +26,20 @@ export const ActivityPage: React.FC = () => {
     queryFn: () => activityService.getMyActivities(),
   });
 
-  const { data: todaySteps } = useQuery({
-    queryKey: ['todaySteps'],
-    queryFn: () => activityService.getTodaySteps(),
+  const { data: trends } = useQuery({
+    queryKey: ['activityTrends'],
+    queryFn: () => activityService.getActivityTrends(),
   });
 
-  // Prepare chart data safely from real activity history or fallback to today's step count
-  const rawChartData = (activities || []).slice(0, 14).map((a) => ({
+  // Prepare chart data dynamically based on timeRange selection
+  const rawList = activities || [];
+  const limit = timeRange === 'today' ? 1 : timeRange === '7d' ? 7 : 30;
+  const chartData = rawList.slice(-limit).map((a) => ({
     date: new Date(a.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' }),
     steps: a.stepCount,
-    calories: a.caloriesBurned,
+    calories: Math.round(a.caloriesBurned),
     distanceKm: parseFloat((a.distanceMeters / 1000).toFixed(2)),
-  })).reverse();
-
-  const chartData = rawChartData.length > 0 
-    ? rawChartData 
-    : (todaySteps?.steps && todaySteps.steps > 0 
-        ? [{ date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }), steps: todaySteps.steps, calories: Math.round(todaySteps.steps * 0.04), distanceKm: parseFloat((todaySteps.steps * 0.00075).toFixed(2)) }]
-        : []);
+  }));
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -77,27 +73,18 @@ export const ActivityPage: React.FC = () => {
 
       {/* Analytics Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        {(() => {
-          const avg = trends?.sevenDayAverageSteps ?? trends?.movingAverageSteps7Days ?? 0;
-          const completion = trends?.goalCompletionRatePercentage ?? trends?.stepCompletionRatePercent ?? (avg > 0 ? (avg / 100) : 0);
-          const displayAvg = avg > 0 ? Math.round(avg) : (chartData.length > 0 ? Math.round(chartData[chartData.length - 1].steps) : 0);
-          return (
-            <>
-              <Card className="p-4">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">7-Day Avg Steps</span>
-                <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">
-                  {displayAvg > 0 ? displayAvg.toLocaleString() : '---'}
-                </p>
-              </Card>
-              <Card className="p-4">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">Goal Completion Rate</span>
-                <p className="text-xl font-extrabold text-brand-600 dark:text-brand-400 mt-1">
-                  {Math.round(completion)}%
-                </p>
-              </Card>
-            </>
-          );
-        })()}
+        <Card className="p-4">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase">7-Day Avg Steps</span>
+          <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">
+            {trends?.sevenDayAverageSteps ? Math.round(trends.sevenDayAverageSteps).toLocaleString() : '---'}
+          </p>
+        </Card>
+        <Card className="p-4">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase">Goal Completion Rate</span>
+          <p className="text-xl font-extrabold text-brand-600 dark:text-brand-400 mt-1">
+            {trends?.goalCompletionRatePercentage ? Math.round(trends.goalCompletionRatePercentage) : 0}%
+          </p>
+        </Card>
         <Card className="p-4">
           <span className="text-[11px] font-semibold text-slate-400 uppercase">Active Streak</span>
           <p className="text-xl font-extrabold text-amber-500 mt-1">

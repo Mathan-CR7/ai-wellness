@@ -101,16 +101,12 @@ public class StepServiceImpl implements StepService
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
-        Optional<DailyStepEntity> opt = dailyStepRepository.findByUserIdAndDate(userId, date);
-        if (opt.isEmpty() && date.equals(LocalDate.now(ZoneId.systemDefault()))) {
-            opt = dailyStepRepository.findTopByUserIdOrderByDateDesc(userId);
-        }
-
-        DailyStepEntity entity = opt.orElseGet(() -> DailyStepEntity.builder()
-                .userId(userId)
-                .date(date)
-                .steps(0L)
-                .build());
+        DailyStepEntity entity = dailyStepRepository.findByUserIdAndDate(userId, date)
+                .orElseGet(() -> DailyStepEntity.builder()
+                        .userId(userId)
+                        .date(date)
+                        .steps(0L)
+                        .build());
 
         return toResponse(entity);
     }

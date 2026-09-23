@@ -22,12 +22,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : null;
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('wellness_token'));
-  const [isLoading, setIsLoading] = useState<boolean>(() => {
-    const hasToken = !!localStorage.getItem('wellness_token');
-    const hasUser = !!localStorage.getItem('wellness_user');
-    // If no token, or if saved user exists, don't block UI with full screen spinner
-    return hasToken && !hasUser;
-  });
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const handleAuthSuccess = (data: AuthResponse) => {
     localStorage.setItem('wellness_token', data.token);
@@ -65,38 +60,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    let isMounted = true;
     const initAuth = async () => {
       if (token) {
         try {
-          // Timeout race condition: if backend request takes > 3 seconds, unblock UI
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Auth timeout')), 3000)
-          );
-          const profile = (await Promise.race([
-            userService.getCurrentProfile(),
-            timeoutPromise,
-          ])) as UserProfile;
-          if (isMounted) {
-            setUser(profile);
-            localStorage.setItem('wellness_user', JSON.stringify(profile));
-          }
-        } catch (err) {
-          console.warn('Auth init note:', err);
-          // If token invalid (401), logout
-          if (!localStorage.getItem('wellness_user')) {
-            logout();
-          }
+          const profile = await userService.getCurrentProfile();
+          setUser(profile);
+          localStorage.setItem('wellness_user', JSON.stringify(profile));
+        } catch {
+          logout();
         }
       }
-      if (isMounted) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     };
     initAuth();
-    return () => {
-      isMounted = false;
-    };
   }, [token]);
 
   return (

@@ -15,14 +15,12 @@ public interface DailyStepRepository extends JpaRepository<DailyStepEntity, Long
 
     Optional<DailyStepEntity> findByUserIdAndDate(Long userId, LocalDate date);
 
-    Optional<DailyStepEntity> findTopByUserIdOrderByDateDesc(Long userId);
-
-    List<DailyStepEntity> findByUserIdOrderByDateDesc(Long userId);
-
-    List<DailyStepEntity> findByUserIdAndDateBetween(Long userId, LocalDate startDate, LocalDate endDate);
-
     @Query("SELECT COALESCE(SUM(d.steps), 0) FROM DailyStepEntity d WHERE d.userId = :userId AND d.date >= :startDate AND d.date <= :endDate")
     Long sumStepsByUserIdAndDateRange(@Param("userId") Long userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 
     List<DailyStepEntity> findByUserIdInAndDateBetween(List<Long> userIds, LocalDate startDate, LocalDate endDate);
+
+    List<DailyStepEntity> findByUserIdAndDateBetweenOrderByDateAsc(Long userId, LocalDate startDate, LocalDate endDate);
+
+    List<DailyStepEntity> findByUserIdOrderByDateDesc(Long userId);
 }
