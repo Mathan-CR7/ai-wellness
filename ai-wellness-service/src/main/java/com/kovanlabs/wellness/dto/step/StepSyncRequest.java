@@ -1,7 +1,8 @@
 package com.kovanlabs.wellness.dto.step;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,9 +14,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class StepSyncRequest {
 
-    @NotNull(message = "Step count is required")
+    @JsonAlias({"steps", "step_count", "stepCount", "totalSteps"})
     @Min(value = 0, message = "Step count cannot be negative")
     private Long steps;
 

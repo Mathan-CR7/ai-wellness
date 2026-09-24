@@ -1,7 +1,8 @@
 package com.kovanlabs.wellness.dto.activity;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,26 +14,36 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ActivitySyncRequest {
 
-    @NotNull(message = "Step count is required")
+    @JsonAlias({"steps", "step_count", "stepCount", "totalSteps"})
     @Min(value = 0, message = "Step count cannot be negative")
     private Integer stepCount;
 
-    @NotNull(message = "Distance in meters is required")
+    @JsonAlias({"steps", "step_count", "stepCount"})
+    private Long steps;
+
+    @JsonAlias({"distanceMeters", "distance_meters", "distance"})
     @Min(value = 0, message = "Distance cannot be negative")
     private Double distanceMeters;
 
-    @NotNull(message = "Calories burned is required")
+    @JsonAlias({"caloriesBurned", "calories_burned", "calories"})
     @Min(value = 0, message = "Calories cannot be negative")
     private Double caloriesBurned;
 
-    @NotNull(message = "Start time is required")
+    @JsonAlias({"startTime", "start_time", "timestamp"})
     private Instant startTime;
 
-    @NotNull(message = "End time is required")
+    @JsonAlias({"endTime", "end_time"})
     private Instant endTime;
 
     @Builder.Default
     private String sourceDevice = "ANDROID_HEALTH_CONNECT";
+
+    public Long getEffectiveStepCount() {
+        if (stepCount != null) return stepCount.longValue();
+        if (steps != null) return steps;
+        return 0L;
+    }
 }

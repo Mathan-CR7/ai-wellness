@@ -86,13 +86,20 @@ public class ActivityServiceImpl implements ActivityService {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
-        activityValidator.validate(request);
+        long newStepCount = request.getEffectiveStepCount();
+        Double distanceMeters = request.getDistanceMeters() != null && request.getDistanceMeters() > 0
+                ? request.getDistanceMeters()
+                : newStepCount * 0.753;
+        Double caloriesBurned = request.getCaloriesBurned() != null && request.getCaloriesBurned() > 0
+                ? request.getCaloriesBurned()
+                : newStepCount * 0.04;
+        Instant startTime = request.getStartTime() != null ? request.getStartTime() : Instant.now();
+        Instant endTime = request.getEndTime() != null ? request.getEndTime() : Instant.now();
 
         // 1. Idempotently update DailyStepEntity in DB (SINGLE SOURCE OF TRUTH)
         LocalDate today = LocalDate.now(ZoneId.systemDefault());
         Optional<DailyStepEntity> existingStepOpt = dailyStepRepository.findByUserIdAndDate(userId, today);
         DailyStepEntity stepEntity;
-        long newStepCount = request.getStepCount().longValue();
 
         if (existingStepOpt.isPresent()) {
             stepEntity = existingStepOpt.get();
@@ -110,20 +117,14 @@ public class ActivityServiceImpl implements ActivityService {
         try {
             UserEntity user = userProvider.findById(userId).orElse(null);
             String email = user != null ? user.getEmail() : "";
-            double distance = request.getDistanceMeters() != null && request.getDistanceMeters() > 0
-                    ? request.getDistanceMeters()
-                    : newStepCount * 0.753;
-            double calories = request.getCaloriesBurned() != null && request.getCaloriesBurned() > 0
-                    ? request.getCaloriesBurned()
-                    : newStepCount * 0.04;
 
             ActivityUpdateMessage updateMsg = ActivityUpdateMessage.builder()
                     .userId(userId)
                     .userEmail(email)
                     .date(today.toString())
                     .steps(newStepCount)
-                    .distanceMeters(distance)
-                    .caloriesBurned(calories)
+                    .distanceMeters(distanceMeters)
+                    .caloriesBurned(caloriesBurned)
                     .timestamp(Instant.now())
                     .build();
 
@@ -140,8 +141,15 @@ public class ActivityServiceImpl implements ActivityService {
         }
 
         // 4. Save active Activity record log
-        ActivityEntity entity = activityMapper.toEntity(request);
-        entity.setUserId(userId);
+        ActivityEntity entity = ActivityEntity.builder()
+                .userId(userId)
+                .stepCount((int) newStepCount)
+                .distanceMeters(distanceMeters)
+                .caloriesBurned(caloriesBurned)
+                .startTime(startTime)
+                .endTime(endTime)
+                .sourceDevice(request.getSourceDevice() != null ? request.getSourceDevice() : "ANDROID_HEALTH_CONNECT")
+                .build();
         ActivityEntity savedActivity = activityProvider.save(entity);
 
         // 5. Broadcast real-time WebSocket leaderboard updates
