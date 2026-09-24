@@ -274,6 +274,4 @@ public class ChallengeServiceImpl implements ChallengeService {
                 .joinedAt(entity.getJoinedAt())
                 .build();
     }
-
-
 }

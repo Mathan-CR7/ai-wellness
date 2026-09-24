@@ -1,5 +1,7 @@
 package com.kovanlabs.wellness.ui
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -14,6 +16,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.lifecycleScope
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.kovanlabs.wellness.R
 import com.kovanlabs.wellness.api.AuthInterceptor
 import com.kovanlabs.wellness.api.WellnessApiService
@@ -27,15 +31,30 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.*
+
+data class ScheduledWorkoutMobileTask(
+    val id: String,
+    val exerciseType: String,
+    val durationMinutes: Int,
+    val caloriesBurned: Int,
+    val scheduledDateTimeMillis: Long,
+    val notes: String? = null,
+    var status: String = "SCHEDULED", // SCHEDULED, RUNNING, PAUSED, COMPLETED
+    var secondsLeft: Int = durationMinutes * 60
+)
 
 class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val BASE_URL = "https://ai-wellness-jt1d.onrender.com/"
         private const val TAG = "MainActivity"
+        private const val SCHEDULED_WORKOUTS_PREFS = "scheduled_workouts_prefs"
+        private const val KEY_TASKS_JSON = "tasks_json"
     }
 
     private lateinit var healthConnectManager: HealthConnectManager
@@ -97,15 +116,23 @@ class MainActivity : AppCompatActivity() {
     // Leaderboard Container
     private lateinit var leaderboardContainer: LinearLayout
 
-    // Profile & Workout Elements
+    // Profile, Workouts & Scheduler Elements
     private lateinit var exerciseTypeEditText: EditText
     private lateinit var exerciseDurationEditText: EditText
     private lateinit var logExerciseButton: Button
+    private lateinit var scheduleWorkoutButton: Button
+    private lateinit var scheduledWorkoutsContainer: LinearLayout
+    private lateinit var completedExercisesContainer: LinearLayout
 
     private var isRegisterMode = false
     private var autoSyncJob: Job? = null
+    private var scheduledTasksTickerJob: Job? = null
+    private var activeWorkoutTimerJobs = mutableMapOf<String, Job>()
     private var currentStepCount = 0
     private var currentGoal = 10000
+
+    private var scheduledTasksList = mutableListOf<ScheduledWorkoutMobileTask>()
+    private val gson = Gson()
 
     private val requestPermissionActivityContract = PermissionController.createRequestPermissionResultContract()
     private val requestPermissions = registerForActivityResult(requestPermissionActivityContract) { _ ->
@@ -177,6 +204,9 @@ class MainActivity : AppCompatActivity() {
         exerciseTypeEditText = findViewById(R.id.exerciseTypeEditText)
         exerciseDurationEditText = findViewById(R.id.exerciseDurationEditText)
         logExerciseButton = findViewById(R.id.logExerciseButton)
+        scheduleWorkoutButton = findViewById(R.id.scheduleWorkoutButton)
+        scheduledWorkoutsContainer = findViewById(R.id.scheduledWorkoutsContainer)
+        completedExercisesContainer = findViewById(R.id.completedExercisesContainer)
 
         // Setup Listeners
         loginButton.setOnClickListener {
@@ -204,11 +234,16 @@ class MainActivity : AppCompatActivity() {
         // Workout Log Listener
         logExerciseButton.setOnClickListener { handleLogExercise() }
 
+        // Schedule Workout Dialog Listener
+        scheduleWorkoutButton.setOnClickListener { showScheduleWorkoutDialog() }
+
         // Start Break Listener
         findViewById<Button>(R.id.startBreakButton)?.setOnClickListener {
             showGuidedMovementBreakDialog()
         }
 
+        loadSavedScheduledTasks()
+        startScheduledTasksTicker()
         checkAuthSession()
     }
 
@@ -216,12 +251,15 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         if (isUserLoggedIn()) {
             checkHealthConnectStatus()
+            fetchMyExercises()
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         stompClient?.disconnect()
+        scheduledTasksTickerJob?.cancel()
+        activeWorkoutTimerJobs.values.forEach { it.cancel() }
     }
 
     private fun isUserLoggedIn(): Boolean {
@@ -273,6 +311,7 @@ class MainActivity : AppCompatActivity() {
             fetchUserProfile()
             fetchLeaderboard()
             fetchChallenges()
+            fetchMyExercises()
             initWebSocket()
         } else {
             loginContainer.visibility = View.VISIBLE
@@ -445,12 +484,521 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this@MainActivity, "Workout logged: $type ($duration mins)", Toast.LENGTH_SHORT).show()
                     exerciseTypeEditText.setText("")
                     exerciseDurationEditText.setText("")
+                    fetchMyExercises()
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Error logging workout: ${e.message}", Toast.LENGTH_SHORT).show()
             } finally {
                 logExerciseButton.isEnabled = true
             }
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // WORKOUT TASK SCHEDULER & LOCKED TIMERS (MOBILE)
+    // ---------------------------------------------------------------------------
+
+    private fun loadSavedScheduledTasks() {
+        try {
+            val prefs = getSharedPreferences(SCHEDULED_WORKOUTS_PREFS, MODE_PRIVATE)
+            val json = prefs.getString(KEY_TASKS_JSON, null)
+            if (!json.isNullOrBlank()) {
+                val type = object : TypeToken<List<ScheduledWorkoutMobileTask>>() {}.type
+                val loaded: List<ScheduledWorkoutMobileTask> = gson.fromJson(json, type)
+                scheduledTasksList.clear()
+                scheduledTasksList.addAll(loaded)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading saved scheduled tasks: ${e.message}")
+        }
+    }
+
+    private fun saveScheduledTasks() {
+        try {
+            val json = gson.toJson(scheduledTasksList)
+            getSharedPreferences(SCHEDULED_WORKOUTS_PREFS, MODE_PRIVATE)
+                .edit()
+                .putString(KEY_TASKS_JSON, json)
+                .apply()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving scheduled tasks: ${e.message}")
+        }
+    }
+
+    private fun startScheduledTasksTicker() {
+        scheduledTasksTickerJob?.cancel()
+        scheduledTasksTickerJob = lifecycleScope.launch {
+            while (isActive) {
+                renderScheduledTasksUI()
+                delay(1000L)
+            }
+        }
+    }
+
+    private fun showScheduleWorkoutDialog() {
+        val context = this
+        val cal = Calendar.getInstance()
+
+        var selectedYear = cal.get(Calendar.YEAR)
+        var selectedMonth = cal.get(Calendar.MONTH)
+        var selectedDay = cal.get(Calendar.DAY_OF_MONTH)
+        var selectedHour = cal.get(Calendar.HOUR_OF_DAY)
+        var selectedMinute = cal.get(Calendar.MINUTE) + 5
+
+        val dialogView = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 40, 40, 40)
+            setBackgroundColor(Color.WHITE)
+        }
+
+        val titleTv = TextView(context).apply {
+            text = "📅 Schedule Workout with Date & Time"
+            textSize = 16f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.parseColor("#1B5E20"))
+            setPadding(0, 0, 0, 16)
+        }
+
+        // Exercise Type Spinner
+        val typeSpinner = Spinner(context).apply {
+            adapter = ArrayAdapter(
+                context,
+                android.R.layout.simple_spinner_dropdown_item,
+                listOf("WALKING", "RUNNING", "CYCLING", "SWIMMING", "YOGA", "STRENGTH_TRAINING", "HIIT", "OTHER")
+            )
+        }
+
+        // Date & Time Buttons
+        val dateBtn = Button(context).apply {
+            text = "Select Date (%04d-%02d-%02d)".format(selectedYear, selectedMonth + 1, selectedDay)
+            setBackgroundColor(Color.parseColor("#E8F5E9"))
+            setTextColor(Color.parseColor("#1B5E20"))
+        }
+
+        val timeBtn = Button(context).apply {
+            text = "Select Time (%02d:%02d)".format(selectedHour, selectedMinute)
+            setBackgroundColor(Color.parseColor("#E8F5E9"))
+            setTextColor(Color.parseColor("#1B5E20"))
+        }
+
+        dateBtn.setOnClickListener {
+            DatePickerDialog(context, { _, y, m, d ->
+                selectedYear = y
+                selectedMonth = m
+                selectedDay = d
+                dateBtn.text = "Select Date (%04d-%02d-%02d)".format(y, m + 1, d)
+            }, selectedYear, selectedMonth, selectedDay).show()
+        }
+
+        timeBtn.setOnClickListener {
+            TimePickerDialog(context, { _, h, min ->
+                selectedHour = h
+                selectedMinute = min
+                timeBtn.text = "Select Time (%02d:%02d)".format(h, min)
+            }, selectedHour, selectedMinute, true).show()
+        }
+
+        val durationEt = EditText(context).apply {
+            hint = "Duration in Minutes (e.g. 30)"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText("30")
+            setPadding(12, 12, 12, 12)
+        }
+
+        val notesEt = EditText(context).apply {
+            hint = "Notes (e.g. Evening outdoor jog)"
+            setPadding(12, 12, 12, 12)
+        }
+
+        val confirmBtn = Button(context).apply {
+            text = "CONFIRM & SCHEDULE TASK"
+            setBackgroundColor(Color.parseColor("#2E7D32"))
+            setTextColor(Color.WHITE)
+            setTypeface(null, Typeface.BOLD)
+        }
+
+        dialogView.addView(titleTv)
+        dialogView.addView(typeSpinner)
+        dialogView.addView(dateBtn)
+        dialogView.addView(timeBtn)
+        dialogView.addView(durationEt)
+        dialogView.addView(notesEt)
+        dialogView.addView(confirmBtn)
+
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(context)
+            .setView(dialogView)
+            .create()
+
+        confirmBtn.setOnClickListener {
+            val durationMins = durationEt.text.toString().toIntOrNull() ?: 30
+            val exerciseType = typeSpinner.selectedItem.toString()
+            val notesText = notesEt.text.toString().trim()
+
+            val targetCal = Calendar.getInstance().apply {
+                set(Calendar.YEAR, selectedYear)
+                set(Calendar.MONTH, selectedMonth)
+                set(Calendar.DAY_OF_MONTH, selectedDay)
+                set(Calendar.HOUR_OF_DAY, selectedHour)
+                set(Calendar.MINUTE, selectedMinute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+
+            val newTask = ScheduledWorkoutMobileTask(
+                id = UUID.randomUUID().toString(),
+                exerciseType = exerciseType,
+                durationMinutes = durationMins,
+                caloriesBurned = durationMins * 5,
+                scheduledDateTimeMillis = targetCal.timeInMillis,
+                notes = if (notesText.isNotBlank()) notesText else null,
+                status = "SCHEDULED",
+                secondsLeft = durationMins * 60
+            )
+
+            scheduledTasksList.add(0, newTask)
+            saveScheduledTasks()
+            renderScheduledTasksUI()
+            dialog.dismiss()
+
+            val sdf = SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault())
+            Toast.makeText(context, "📅 Scheduled $exerciseType for ${sdf.format(targetCal.time)}", Toast.LENGTH_LONG).show()
+        }
+
+        dialog.show()
+    }
+
+    private fun renderScheduledTasksUI() {
+        scheduledWorkoutsContainer.removeAllViews()
+
+        if (scheduledTasksList.isEmpty()) {
+            val emptyTv = TextView(this).apply {
+                text = "No scheduled workouts active."
+                textSize = 12f
+                setTextColor(Color.GRAY)
+                setPadding(16, 16, 16, 16)
+            }
+            scheduledWorkoutsContainer.addView(emptyTv)
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        val sdf = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
+
+        for (task in scheduledTasksList) {
+            val cardLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(16, 16, 16, 16)
+                setBackgroundColor(Color.WHITE)
+                elevation = 3f
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                params.setMargins(0, 0, 0, 12)
+                layoutParams = params
+            }
+
+            val headerLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+
+            val typeBadge = TextView(this).apply {
+                text = "${task.exerciseType} • ${task.status}"
+                textSize = 11f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(Color.WHITE)
+                setBackgroundColor(when (task.status) {
+                    "RUNNING" -> Color.parseColor("#2E7D32")
+                    "COMPLETED" -> Color.parseColor("#1565C0")
+                    else -> Color.parseColor("#E65100")
+                })
+                setPadding(12, 4, 12, 4)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { weight = 1f }
+            }
+
+            val deleteBtn = TextView(this).apply {
+                text = "🗑️"
+                textSize = 14f
+                setPadding(8, 4, 8, 4)
+                setOnClickListener {
+                    scheduledTasksList.remove(task)
+                    activeWorkoutTimerJobs[task.id]?.cancel()
+                    saveScheduledTasks()
+                    renderScheduledTasksUI()
+                }
+            }
+
+            headerLayout.addView(typeBadge)
+            headerLayout.addView(deleteBtn)
+
+            val schedTimeTv = TextView(this).apply {
+                text = "📅 Scheduled: ${sdf.format(Date(task.scheduledDateTimeMillis))}"
+                textSize = 12f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(Color.parseColor("#555555"))
+                setPadding(0, 8, 0, 4)
+            }
+
+            val detailsTv = TextView(this).apply {
+                text = "⏱️ ${task.durationMinutes} Mins  •  🔥 ${task.caloriesBurned} kcal"
+                textSize = 12f
+                setTextColor(Color.parseColor("#333333"))
+            }
+
+            // Monospace Timer Box
+            val timerBox = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setBackgroundColor(Color.parseColor("#111827"))
+                setPadding(16, 12, 16, 12)
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                params.setMargins(0, 10, 0, 10)
+                layoutParams = params
+            }
+
+            val m = task.secondsLeft / 60
+            val s = task.secondsLeft % 60
+            val timerTv = TextView(this).apply {
+                text = "%02d:%02d".format(m, s)
+                textSize = 28f
+                setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
+                setTextColor(Color.parseColor("#10B981"))
+            }
+
+            val isReady = now >= task.scheduledDateTimeMillis
+            val diffMs = task.scheduledDateTimeMillis - now
+            val diffMins = Math.max(1, (diffMs / (1000 * 60)).toInt())
+            val timeUntilText = if (isReady) "Ready to Start" else "🔒 Starts in ${diffMins}m"
+
+            val timerSubTv = TextView(this).apply {
+                text = when (task.status) {
+                    "RUNNING" -> "Workout in Progress..."
+                    "PAUSED" -> "Timer Paused"
+                    "COMPLETED" -> "Workout Completed 🎉"
+                    else -> timeUntilText
+                }
+                textSize = 10f
+                setTextColor(Color.parseColor("#9CA3AF"))
+            }
+
+            timerBox.addView(timerTv)
+            timerBox.addView(timerSubTv)
+
+            // Start / Action Button
+            val actionBtnLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+            }
+
+            if (task.status == "SCHEDULED") {
+                val startBtn = Button(this).apply {
+                    text = if (isReady) "▶️ START TIMER NOW" else "🔒 LOCKED • $timeUntilText"
+                    setBackgroundColor(if (isReady) Color.parseColor("#2E7D32") else Color.parseColor("#9E9E9E"))
+                    setTextColor(Color.WHITE)
+                    isEnabled = true
+                    setOnClickListener {
+                        if (!isReady) {
+                            Toast.makeText(this@MainActivity, "🔒 Cannot start yet! Scheduled for ${sdf.format(Date(task.scheduledDateTimeMillis))}", Toast.LENGTH_SHORT).show()
+                        } else {
+                            startTaskTimer(task)
+                        }
+                    }
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                }
+                actionBtnLayout.addView(startBtn)
+            } else if (task.status == "RUNNING") {
+                val pauseBtn = Button(this).apply {
+                    text = "⏸️ PAUSE"
+                    setBackgroundColor(Color.parseColor("#E65100"))
+                    setTextColor(Color.WHITE)
+                    setOnClickListener {
+                        task.status = "PAUSED"
+                        activeWorkoutTimerJobs[task.id]?.cancel()
+                        saveScheduledTasks()
+                        renderScheduledTasksUI()
+                    }
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+
+                val finishBtn = Button(this).apply {
+                    text = "✅ FINISH"
+                    setBackgroundColor(Color.parseColor("#1565C0"))
+                    setTextColor(Color.WHITE)
+                    setOnClickListener {
+                        finishTaskTimer(task)
+                    }
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+
+                actionBtnLayout.addView(pauseBtn)
+                actionBtnLayout.addView(finishBtn)
+            } else if (task.status == "PAUSED") {
+                val resumeBtn = Button(this).apply {
+                    text = "▶️ RESUME"
+                    setBackgroundColor(Color.parseColor("#2E7D32"))
+                    setTextColor(Color.WHITE)
+                    setOnClickListener {
+                        startTaskTimer(task)
+                    }
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+
+                val finishBtn = Button(this).apply {
+                    text = "✅ FINISH"
+                    setBackgroundColor(Color.parseColor("#1565C0"))
+                    setTextColor(Color.WHITE)
+                    setOnClickListener {
+                        finishTaskTimer(task)
+                    }
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+
+                actionBtnLayout.addView(resumeBtn)
+                actionBtnLayout.addView(finishBtn)
+            } else if (task.status == "COMPLETED") {
+                val completedTv = TextView(this).apply {
+                    text = "✅ Completed & Logged to DB"
+                    textSize = 12f
+                    setTypeface(null, Typeface.BOLD)
+                    setTextColor(Color.parseColor("#2E7D32"))
+                    gravity = Gravity.CENTER
+                    setPadding(0, 6, 0, 6)
+                }
+                actionBtnLayout.addView(completedTv)
+            }
+
+            cardLayout.addView(headerLayout)
+            cardLayout.addView(schedTimeTv)
+            cardLayout.addView(detailsTv)
+            cardLayout.addView(timerBox)
+            cardLayout.addView(actionBtnLayout)
+
+            scheduledWorkoutsContainer.addView(cardLayout)
+        }
+    }
+
+    private fun startTaskTimer(task: ScheduledWorkoutMobileTask) {
+        task.status = "RUNNING"
+        saveScheduledTasks()
+        renderScheduledTasksUI()
+
+        activeWorkoutTimerJobs[task.id]?.cancel()
+        val job = lifecycleScope.launch {
+            while (isActive && task.status == "RUNNING") {
+                if (task.secondsLeft > 1) {
+                    delay(1000L)
+                    task.secondsLeft--
+                } else {
+                    finishTaskTimer(task)
+                    break
+                }
+            }
+        }
+        activeWorkoutTimerJobs[task.id] = job
+    }
+
+    private fun finishTaskTimer(task: ScheduledWorkoutMobileTask) {
+        activeWorkoutTimerJobs[task.id]?.cancel()
+        task.status = "COMPLETED"
+        task.secondsLeft = 0
+        saveScheduledTasks()
+        renderScheduledTasksUI()
+
+        Toast.makeText(this, "🎉 Scheduled Workout Completed! Logging to database...", Toast.LENGTH_LONG).show()
+
+        lifecycleScope.launch {
+            try {
+                getApiService().logExercise(
+                    ExerciseLogRequestDto(
+                        exerciseType = task.exerciseType,
+                        durationMinutes = task.durationMinutes,
+                        caloriesBurned = task.caloriesBurned,
+                        notes = "[Scheduled Mobile Workout Completed] ${task.notes ?: ""}".trim()
+                    )
+                )
+                fetchMyExercises()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to log completed workout: ${e.message}")
+            }
+        }
+    }
+
+    private fun fetchMyExercises() {
+        lifecycleScope.launch {
+            try {
+                val response = getApiService().getMyExercises()
+                if (response.isSuccessful && response.body() != null) {
+                    renderCompletedExercisesUI(response.body()!!)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Fetch exercises error: ${e.message}")
+            }
+        }
+    }
+
+    private fun renderCompletedExercisesUI(exercises: List<ExerciseResponseDto>) {
+        completedExercisesContainer.removeAllViews()
+
+        if (exercises.isEmpty()) {
+            val emptyTv = TextView(this).apply {
+                text = "No completed exercise sessions in history yet."
+                textSize = 12f
+                setTextColor(Color.GRAY)
+                setPadding(0, 8, 0, 8)
+            }
+            completedExercisesContainer.addView(emptyTv)
+            return
+        }
+
+        for (ex in exercises) {
+            val rowLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(12, 12, 12, 12)
+                setBackgroundColor(Color.parseColor("#F9FAFB"))
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                params.setMargins(0, 0, 0, 8)
+                layoutParams = params
+            }
+
+            val titleTv = TextView(this).apply {
+                text = "🏋️ ${ex.exerciseType}  •  ${ex.durationMinutes} mins  •  ${ex.caloriesBurned} kcal"
+                textSize = 13f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(Color.parseColor("#1F2937"))
+            }
+
+            val dateTv = TextView(this).apply {
+                text = "Logged: ${ex.loggedAt ?: "Today"}"
+                textSize = 11f
+                setTextColor(Color.GRAY)
+            }
+
+            rowLayout.addView(titleTv)
+            rowLayout.addView(dateTv)
+
+            if (!ex.notes.isNullOrBlank()) {
+                val notesTv = TextView(this).apply {
+                    text = "\"${ex.notes}\""
+                    textSize = 11f
+                    setTextColor(Color.parseColor("#4B5563"))
+                    setPadding(0, 4, 0, 0)
+                }
+                rowLayout.addView(notesTv)
+            }
+
+            completedExercisesContainer.addView(rowLayout)
         }
     }
 
@@ -564,6 +1112,17 @@ class MainActivity : AppCompatActivity() {
     private fun renderLeaderboardUI(rankings: List<LeaderboardEntry>) {
         leaderboardContainer.removeAllViews()
 
+        // Squad Header Banner with Invite Code
+        val squadHeaderTv = TextView(this).apply {
+            text = "⚡ AURA Squad Roster • Invite Code: AURA-SQUAD-2026"
+            textSize = 12f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.parseColor("#1B5E20"))
+            setBackgroundColor(Color.parseColor("#E8F5E9"))
+            setPadding(16, 12, 16, 12)
+        }
+        leaderboardContainer.addView(squadHeaderTv)
+
         if (rankings.isEmpty()) {
             val emptyTv = TextView(this).apply {
                 text = "No team activity recorded yet"
@@ -598,12 +1157,29 @@ class MainActivity : AppCompatActivity() {
                 ).apply { setMargins(0, 0, 16, 0) }
             }
 
+            val nameLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
             val nameTv = TextView(this).apply {
                 text = entry.fullName ?: entry.email ?: "User"
                 textSize = 14f
                 setTypeface(null, Typeface.BOLD)
                 setTextColor(Color.parseColor("#222222"))
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            nameLayout.addView(nameTv)
+
+            // Highlight Squad Creator & Admin
+            if (entry.rank == 1) {
+                val adminBadgeTv = TextView(this).apply {
+                    text = "👑 Squad Admin & Creator"
+                    textSize = 10f
+                    setTypeface(null, Typeface.BOLD)
+                    setTextColor(Color.parseColor("#B45309"))
+                }
+                nameLayout.addView(adminBadgeTv)
             }
 
             val stepsTv = TextView(this).apply {
@@ -615,7 +1191,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             rowLayout.addView(rankTv)
-            rowLayout.addView(nameTv)
+            rowLayout.addView(nameLayout)
             rowLayout.addView(stepsTv)
             leaderboardContainer.addView(rowLayout)
         }
@@ -802,7 +1378,6 @@ class MainActivity : AppCompatActivity() {
                     delay(1000L)
                     secondsLeft--
                 } else {
-                    // Current stage completed!
                     val currentStage = stages[currentStageIdx]
                     Toast.makeText(context, currentStage.notice, Toast.LENGTH_LONG).show()
 
