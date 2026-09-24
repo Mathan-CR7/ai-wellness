@@ -96,22 +96,29 @@ public class ActivityServiceImpl implements ActivityService {
         Instant startTime = request.getParsedStartTime();
         Instant endTime = request.getParsedEndTime();
 
-        // 1. Idempotently update DailyStepEntity in DB (SINGLE SOURCE OF TRUTH)
-        LocalDate today = LocalDate.now(ZoneId.systemDefault());
-        Optional<DailyStepEntity> existingStepOpt = dailyStepRepository.findByUserIdAndDate(userId, today);
-        DailyStepEntity stepEntity;
+        // 1. Idempotently update DailyStepEntity in DB (SINGLE SOURCE OF TRUTH) for targetDate and serverToday
+        LocalDate targetDate = startTime != null ? startTime.atZone(ZoneId.systemDefault()).toLocalDate() : LocalDate.now(ZoneId.systemDefault());
+        LocalDate serverToday = LocalDate.now(ZoneId.systemDefault());
 
-        if (existingStepOpt.isPresent()) {
-            stepEntity = existingStepOpt.get();
-            stepEntity.setSteps(newStepCount);
-        } else {
-            stepEntity = DailyStepEntity.builder()
-                    .userId(userId)
-                    .date(today)
-                    .steps(newStepCount)
-                    .build();
+        for (LocalDate dateToUpdate : List.of(targetDate, serverToday)) {
+            try {
+                Optional<DailyStepEntity> existingOpt = dailyStepRepository.findByUserIdAndDate(userId, dateToUpdate);
+                DailyStepEntity stepEntity;
+                if (existingOpt.isPresent()) {
+                    stepEntity = existingOpt.get();
+                    stepEntity.setSteps(newStepCount);
+                } else {
+                    stepEntity = DailyStepEntity.builder()
+                            .userId(userId)
+                            .date(dateToUpdate)
+                            .steps(newStepCount)
+                            .build();
+                }
+                dailyStepRepository.save(stepEntity);
+            } catch (Exception e) {
+                log.warn("Error updating daily_step entity for date {}: {}", dateToUpdate, e.getMessage());
+            }
         }
-        dailyStepRepository.save(stepEntity);
 
         // 2. Broadcast real-time user activity STOMP update immediately to user
         try {
@@ -121,7 +128,7 @@ public class ActivityServiceImpl implements ActivityService {
             ActivityUpdateMessage updateMsg = ActivityUpdateMessage.builder()
                     .userId(userId)
                     .userEmail(email)
-                    .date(today.toString())
+                    .date(targetDate.toString())
                     .steps(newStepCount)
                     .distanceMeters(distanceMeters)
                     .caloriesBurned(caloriesBurned)

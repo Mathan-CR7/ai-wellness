@@ -57,27 +57,38 @@ public class StepServiceImpl implements StepService {
         }
 
         LocalDate targetDate = request.getParsedDate();
+        LocalDate serverToday = LocalDate.now(ZoneId.systemDefault());
         Long steps = request.getEffectiveSteps();
 
-        Optional<DailyStepEntity> existingOpt = dailyStepRepository.findByUserIdAndDate(userId, targetDate);
+        DailyStepEntity savedEntity = null;
 
-        DailyStepEntity entity;
-        if (existingOpt.isPresent()) {
-            entity = existingOpt.get();
-            log.info("Updating existing daily step record for userId={} on date={}: previousSteps={}, newSteps={}",
-                    userId, targetDate, entity.getSteps(), steps);
-            entity.setSteps(steps);
-        } else {
-            log.info("Creating new daily step record for userId={} on date={}: steps={}",
-                    userId, targetDate, steps);
-            entity = DailyStepEntity.builder()
-                    .userId(userId)
-                    .date(targetDate)
-                    .steps(steps)
-                    .build();
+        for (LocalDate dateToUpdate : List.of(targetDate, serverToday)) {
+            try {
+                Optional<DailyStepEntity> existingOpt = dailyStepRepository.findByUserIdAndDate(userId, dateToUpdate);
+                DailyStepEntity entity;
+                if (existingOpt.isPresent()) {
+                    entity = existingOpt.get();
+                    entity.setSteps(steps);
+                } else {
+                    entity = DailyStepEntity.builder()
+                            .userId(userId)
+                            .date(dateToUpdate)
+                            .steps(steps)
+                            .build();
+                }
+                DailyStepEntity res = dailyStepRepository.save(entity);
+                if (dateToUpdate.equals(targetDate)) {
+                    savedEntity = res;
+                }
+            } catch (Exception e) {
+                log.warn("Failed to save daily step entity for date {}: {}", dateToUpdate, e.getMessage());
+            }
         }
 
-        DailyStepEntity savedEntity = dailyStepRepository.save(entity);
+        if (savedEntity == null) {
+            savedEntity = dailyStepRepository.findByUserIdAndDate(userId, targetDate)
+                    .orElseGet(() -> DailyStepEntity.builder().userId(userId).date(targetDate).steps(steps).build());
+        }
 
         // Broadcast real-time user activity STOMP update to WebSocket topic
         try {
