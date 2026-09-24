@@ -4,6 +4,8 @@ import com.kovanlabs.wellness.config.AppProperties;
 import com.kovanlabs.wellness.dto.activity.ActivitySyncRequest;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+
 @Component
 public class ActivityValidator {
 
@@ -16,20 +18,24 @@ public class ActivityValidator {
     public void validate(ActivitySyncRequest request) {
         int minSteps = appProperties.activity().minValidSteps();
         int maxSteps = appProperties.activity().maxDailySteps();
+        long steps = request.getEffectiveStepCount();
 
-        if (request.getStepCount() < minSteps) {
+        if (steps < minSteps) {
             throw new IllegalArgumentException(
-                    "Step count (" + request.getStepCount() + ") is below minimum valid threshold (" + minSteps + ")."
+                    "Step count (" + steps + ") is below minimum valid threshold (" + minSteps + ")."
             );
         }
 
-        if (request.getStepCount() > maxSteps) {
+        if (steps > maxSteps) {
             throw new IllegalArgumentException(
-                    "Step count (" + request.getStepCount() + ") exceeds maximum daily plausible threshold (" + maxSteps + ")."
+                    "Step count (" + steps + ") exceeds maximum daily plausible threshold (" + maxSteps + ")."
             );
         }
 
-        if (request.getEndTime().isBefore(request.getStartTime())) {
+        Instant start = request.getParsedStartTime();
+        Instant end = request.getParsedEndTime();
+
+        if (end.isBefore(start)) {
             throw new IllegalArgumentException("Activity end time cannot be before start time.");
         }
     }

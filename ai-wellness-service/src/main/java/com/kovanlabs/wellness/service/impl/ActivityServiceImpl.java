@@ -93,8 +93,8 @@ public class ActivityServiceImpl implements ActivityService {
         Double caloriesBurned = request.getCaloriesBurned() != null && request.getCaloriesBurned() > 0
                 ? request.getCaloriesBurned()
                 : newStepCount * 0.04;
-        Instant startTime = request.getStartTime() != null ? request.getStartTime() : Instant.now();
-        Instant endTime = request.getEndTime() != null ? request.getEndTime() : Instant.now();
+        Instant startTime = request.getParsedStartTime();
+        Instant endTime = request.getParsedEndTime();
 
         // 1. Idempotently update DailyStepEntity in DB (SINGLE SOURCE OF TRUTH)
         LocalDate today = LocalDate.now(ZoneId.systemDefault());

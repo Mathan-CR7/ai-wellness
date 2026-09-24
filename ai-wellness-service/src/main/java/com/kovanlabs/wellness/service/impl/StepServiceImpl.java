@@ -56,8 +56,8 @@ public class StepServiceImpl implements StepService {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
-        LocalDate targetDate = request.getDate() != null ? request.getDate() : LocalDate.now(ZoneId.systemDefault());
-        Long steps = request.getSteps();
+        LocalDate targetDate = request.getParsedDate();
+        Long steps = request.getEffectiveSteps();
 
         Optional<DailyStepEntity> existingOpt = dailyStepRepository.findByUserIdAndDate(userId, targetDate);
 
