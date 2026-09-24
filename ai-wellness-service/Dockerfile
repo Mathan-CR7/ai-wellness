@@ -13,11 +13,9 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Copy built JAR from build stage
 COPY --from=build /app/target/ai-wellness-service-1.0.0-SNAPSHOT.jar app.jar
 
-# Expose port 8080
 EXPOSE 8080
 
-# Run Spring Boot app on dynamic PORT
 ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar app.jar"]
+

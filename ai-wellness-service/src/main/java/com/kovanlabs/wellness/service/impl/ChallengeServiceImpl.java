@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -72,7 +71,6 @@ public class ChallengeServiceImpl implements ChallengeService {
 
         ChallengeEntity savedChallenge = challengeProvider.save(entity);
 
-        // Creator automatically joins as first member
         joinChallenge(savedChallenge.getId(), creatorId);
 
         return challengeMapper.toResponse(savedChallenge);
@@ -99,11 +97,13 @@ public class ChallengeServiceImpl implements ChallengeService {
         ChallengeEntity challenge = challengeProvider.findById(challengeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Challenge not found with id: " + challengeId));
 
-        if (userProvider.findById(userId).isEmpty()) {
+        if (userProvider.findById(userId).isEmpty())
+        {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
-        if (challenge.getTargetValue() == null || challenge.getTargetValue() <= 0.0) {
+        if (challenge.getTargetValue() == null || challenge.getTargetValue() <= 0.0)
+        {
             throw new IllegalStateException("Challenge target value must be greater than zero.");
         }
 
@@ -172,7 +172,7 @@ public class ChallengeServiceImpl implements ChallengeService {
 
     @Override
     public void leaveChallenge(Long challengeId, Long userId) {
-        if (!challengeMemberRepository.existsByChallengeIdAndUserId(challengeId, userId)) {
+        if(!challengeMemberRepository.existsByChallengeIdAndUserId(challengeId, userId)) {
             throw new ResourceNotFoundException("User is not a member of challenge id: " + challengeId);
         }
         challengeMemberRepository.deleteByChallengeIdAndUserId(challengeId, userId);

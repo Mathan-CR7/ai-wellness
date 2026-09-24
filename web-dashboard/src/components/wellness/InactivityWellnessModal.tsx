@@ -174,7 +174,7 @@ export const InactivityWellnessModal: React.FC<InactivityWellnessModalProps> = (
                 {currentStage.title}
               </h4>
             </div>
-            <Badge variant="brand">{currentStage.durationMinutes} Mins</Badge>
+            <Badge variant="brand">{Math.floor(currentStage.durationSeconds / 60)} Mins</Badge>
           </div>
 
           <StretchAnimation type={activeStretch} />
