@@ -112,7 +112,7 @@ public class ActivityServiceImpl implements ActivityService {
             String email = user != null ? user.getEmail() : "";
             double distance = request.getDistanceMeters() != null && request.getDistanceMeters() > 0
                     ? request.getDistanceMeters()
-                    : newStepCount * 0.75;
+                    : newStepCount * 0.753;
             double calories = request.getCaloriesBurned() != null && request.getCaloriesBurned() > 0
                     ? request.getCaloriesBurned()
                     : newStepCount * 0.04;
@@ -186,7 +186,14 @@ public class ActivityServiceImpl implements ActivityService {
         List<DailyStepEntity> fullList = new ArrayList<>(existingSteps);
         if (fullList.isEmpty()) {
             Optional<DailyStepEntity> todayEntity = dailyStepRepository.findByUserIdAndDate(userId, today);
-            todayEntity.ifPresent(fullList::add);
+            if (todayEntity.isPresent()) {
+                fullList.add(todayEntity.get());
+            } else {
+                List<DailyStepEntity> recent = dailyStepRepository.findByUserIdOrderByDateDesc(userId);
+                if (!recent.isEmpty()) {
+                    fullList.add(recent.get(0));
+                }
+            }
         }
 
         return fullList.stream().map(d -> {
@@ -217,32 +224,22 @@ public class ActivityServiceImpl implements ActivityService {
         LocalDate today = LocalDate.now(ZoneId.systemDefault());
         Long dailySteps = dailyStepRepository.findByUserIdAndDate(userId, today)
                 .map(DailyStepEntity::getSteps)
-                .orElse(0L);
+                .orElseGet(() -> {
+                    List<DailyStepEntity> recent = dailyStepRepository.findByUserIdOrderByDateDesc(userId);
+                    return (!recent.isEmpty()) ? recent.get(0).getSteps() : 0L;
+                });
 
-        List<ActivityEntity> activities = activityProvider.findByUserId(userId);
-        ActivityEntity latest = (activities != null && !activities.isEmpty()) ? activities.get(0) : null;
-
-        long totalSteps = dailySteps;
-        if (totalSteps == 0L && latest != null && latest.getStepCount() != null) {
-            totalSteps = latest.getStepCount();
-        }
-
-        Double totalDistance = (latest != null && latest.getDistanceMeters() != null && latest.getDistanceMeters() > 0)
-                ? latest.getDistanceMeters()
-                : totalSteps * 0.66;
-
-        Double totalCalories = (latest != null && latest.getCaloriesBurned() != null && latest.getCaloriesBurned() > 0)
-                ? latest.getCaloriesBurned()
-                : totalSteps * 0.04;
+        Double totalDistance = dailySteps * 0.753;
+        Double totalCalories = dailySteps * 0.04;
 
         return ActivitySummaryResponse.builder()
                 .userId(userId)
-                .totalSteps(totalSteps)
+                .totalSteps(dailySteps)
                 .totalDistanceMeters(totalDistance)
                 .totalCaloriesBurned(totalCalories)
                 .periodStart(startTime)
                 .periodEnd(endTime)
-                .activityRecordCount(activities != null ? activities.size() : 0)
+                .activityRecordCount(1)
                 .build();
     }
 

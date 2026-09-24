@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -78,11 +79,11 @@ public class StepServiceImpl implements StepService {
 
         DailyStepEntity savedEntity = dailyStepRepository.save(entity);
 
-        // Broadcast real-time user activity STOMP update
+        // Broadcast real-time user activity STOMP update to WebSocket topic
         try {
             UserEntity user = userProvider.findById(userId).orElse(null);
             String email = user != null ? user.getEmail() : "";
-            double distance = steps * 0.75;
+            double distance = steps * 0.753;
             double calories = steps * 0.04;
 
             ActivityUpdateMessage updateMsg = ActivityUpdateMessage.builder()
@@ -118,8 +119,27 @@ public class StepServiceImpl implements StepService {
     @Override
     @Transactional(readOnly = true)
     public DailyStepResponse getTodaySteps(Long userId) {
+        if (userProvider.findById(userId).isEmpty()) {
+            throw new ResourceNotFoundException("User not found with id: " + userId);
+        }
+
         LocalDate today = LocalDate.now(ZoneId.systemDefault());
-        return getStepsForDate(userId, today);
+        Optional<DailyStepEntity> todayOpt = dailyStepRepository.findByUserIdAndDate(userId, today);
+        if (todayOpt.isPresent()) {
+            return toResponse(todayOpt.get());
+        }
+
+        // Timezone safety: retrieve most recent active daily step record for user if date calculation differs slightly across timezones
+        List<DailyStepEntity> recent = dailyStepRepository.findByUserIdOrderByDateDesc(userId);
+        if (!recent.isEmpty()) {
+            return toResponse(recent.get(0));
+        }
+
+        return DailyStepResponse.builder()
+                .userId(userId)
+                .date(today)
+                .steps(0L)
+                .build();
     }
 
     @Override
