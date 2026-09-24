@@ -7,28 +7,32 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
-public class WebSocketLeaderboardPublisher
-{
+public class WebSocketLeaderboardPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(WebSocketLeaderboardPublisher.class);
     private final SimpMessagingTemplate messagingTemplate;
 
-    public WebSocketLeaderboardPublisher(SimpMessagingTemplate messagingTemplate)
-    {
+    public WebSocketLeaderboardPublisher(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
     }
 
-    public void publishLeaderboardUpdate(Long teamId, TeamLeaderboardResponse leaderboard)
-    {
+    public void publishLeaderboardUpdate(Long teamId, TeamLeaderboardResponse leaderboard) {
         String destination = "/topic/leaderboard/" + teamId;
         log.info("Publishing real-time team leaderboard update to topic: {}", destination);
         messagingTemplate.convertAndSend(destination, leaderboard);
     }
 
-    public void publishChallengeLeaderboardUpdate(Long challengeId, Object leaderboard)
-    {
+    public void publishChallengeLeaderboardUpdate(Long challengeId, Object leaderboard) {
         String destination = "/topic/challenges/" + challengeId + "/leaderboard";
         log.info("Publishing real-time challenge leaderboard update to topic: {}", destination);
         messagingTemplate.convertAndSend(destination, leaderboard);
+    }
+
+    public void publishUserActivityUpdate(Long userId, Object activityUpdate) {
+        String userDestination = "/topic/users/" + userId + "/activity";
+        String globalDestination = "/topic/activity";
+        log.info("Publishing real-time user activity STOMP update for userId={} to topic: {}", userId, userDestination);
+        messagingTemplate.convertAndSend(userDestination, activityUpdate);
+        messagingTemplate.convertAndSend(globalDestination, activityUpdate);
     }
 }

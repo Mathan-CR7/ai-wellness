@@ -198,3 +198,14 @@ export interface NotificationItem {
   timestamp: string;
   read: boolean;
 }
+
+export interface ActivityUpdateMessage {
+  userId: number;
+  userEmail?: string;
+  date: string;
+  steps: number;
+  distanceMeters?: number;
+  caloriesBurned?: number;
+  timestamp?: string;
+}
+

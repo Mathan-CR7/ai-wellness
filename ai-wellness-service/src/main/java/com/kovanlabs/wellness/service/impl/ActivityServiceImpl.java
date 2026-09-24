@@ -4,10 +4,11 @@ import com.kovanlabs.wellness.dto.activity.ActivityResponse;
 import com.kovanlabs.wellness.dto.activity.ActivitySummaryResponse;
 import com.kovanlabs.wellness.dto.activity.ActivitySyncRequest;
 import com.kovanlabs.wellness.dto.activity.ActivityTrendResponse;
+import com.kovanlabs.wellness.dto.activity.ActivityUpdateMessage;
 import com.kovanlabs.wellness.entity.ActivityEntity;
 import com.kovanlabs.wellness.entity.DailyStepEntity;
 import com.kovanlabs.wellness.entity.TeamMemberEntity;
-import com.kovanlabs.wellness.exception.ActivityDataNotAvailableException;
+import com.kovanlabs.wellness.entity.UserEntity;
 import com.kovanlabs.wellness.exception.ResourceNotFoundException;
 import com.kovanlabs.wellness.mapper.ActivityMapper;
 import com.kovanlabs.wellness.provider.ActivityProvider;
@@ -15,13 +16,8 @@ import com.kovanlabs.wellness.provider.TeamProvider;
 import com.kovanlabs.wellness.provider.UserProvider;
 import com.kovanlabs.wellness.repository.ActivityRepository;
 import com.kovanlabs.wellness.repository.DailyStepRepository;
-import com.kovanlabs.wellness.service.ActivityService;
-import com.kovanlabs.wellness.service.ActivityTrendCalculator;
+import com.kovanlabs.wellness.service.*;
 import com.kovanlabs.wellness.service.ActivityValidator;
-import com.kovanlabs.wellness.service.ChallengeService;
-import com.kovanlabs.wellness.service.InactivityDetectionService;
-import com.kovanlabs.wellness.service.LeaderboardService;
-import com.kovanlabs.wellness.service.WebSocketLeaderboardPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -34,7 +30,6 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -64,7 +59,7 @@ public class ActivityServiceImpl implements ActivityService {
             ActivityValidator activityValidator,
             ActivityTrendCalculator activityTrendCalculator,
             WebSocketLeaderboardPublisher leaderboardPublisher,
-            LeaderboardService leaderboardService,
+            @Lazy LeaderboardService leaderboardService,
             TeamProvider teamProvider,
             DailyStepRepository dailyStepRepository,
             ActivityRepository activityRepository,
@@ -91,38 +86,65 @@ public class ActivityServiceImpl implements ActivityService {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
-        // Validate threshold bounds
         activityValidator.validate(request);
 
-        // 1. Idempotently update DailyStepEntity in DB so end-of-day step record is saved for analytics
+        // 1. Idempotently update DailyStepEntity in DB (SINGLE SOURCE OF TRUTH)
         LocalDate today = LocalDate.now(ZoneId.systemDefault());
         Optional<DailyStepEntity> existingStepOpt = dailyStepRepository.findByUserIdAndDate(userId, today);
         DailyStepEntity stepEntity;
+        long newStepCount = request.getStepCount().longValue();
+
         if (existingStepOpt.isPresent()) {
             stepEntity = existingStepOpt.get();
-            stepEntity.setSteps(request.getStepCount().longValue());
+            stepEntity.setSteps(newStepCount);
         } else {
             stepEntity = DailyStepEntity.builder()
                     .userId(userId)
                     .date(today)
-                    .steps(request.getStepCount().longValue())
+                    .steps(newStepCount)
                     .build();
         }
         dailyStepRepository.save(stepEntity);
 
-        // 2. Register step sync with InactivityDetectionService to check if real physical steps increased
+        // 2. Broadcast real-time user activity STOMP update immediately to user
         try {
-            inactivityDetectionService.registerStepSync(userId, request.getStepCount().longValue());
+            UserEntity user = userProvider.findById(userId).orElse(null);
+            String email = user != null ? user.getEmail() : "";
+            double distance = request.getDistanceMeters() != null && request.getDistanceMeters() > 0
+                    ? request.getDistanceMeters()
+                    : newStepCount * 0.75;
+            double calories = request.getCaloriesBurned() != null && request.getCaloriesBurned() > 0
+                    ? request.getCaloriesBurned()
+                    : newStepCount * 0.04;
+
+            ActivityUpdateMessage updateMsg = ActivityUpdateMessage.builder()
+                    .userId(userId)
+                    .userEmail(email)
+                    .date(today.toString())
+                    .steps(newStepCount)
+                    .distanceMeters(distance)
+                    .caloriesBurned(calories)
+                    .timestamp(Instant.now())
+                    .build();
+
+            leaderboardPublisher.publishUserActivityUpdate(userId, updateMsg);
+        } catch (Exception e) {
+            log.warn("Failed to broadcast user activity WebSocket update for userId={}: {}", userId, e.getMessage());
+        }
+
+        // 3. Register step sync with InactivityDetectionService
+        try {
+            inactivityDetectionService.registerStepSync(userId, newStepCount);
         } catch (Exception e) {
             log.warn("Failed to register activity step sync with InactivityDetectionService for userId={}: {}", userId, e.getMessage());
         }
 
-        // 3. Save active Activity record
+        // 4. Save active Activity record log
         ActivityEntity entity = activityMapper.toEntity(request);
         entity.setUserId(userId);
         ActivityEntity savedActivity = activityProvider.save(entity);
 
-        // 4. Broadcast real-time WebSocket leaderboard updates to Team #1 & user's teams
+        // 5. Broadcast real-time WebSocket leaderboard updates
         try {
             Instant now = Instant.now();
             Instant weekAgo = now.minus(7, ChronoUnit.DAYS);
@@ -140,7 +162,7 @@ public class ActivityServiceImpl implements ActivityService {
             log.warn("Failed to broadcast leaderboard update for userId={}: {}", userId, e.getMessage(), e);
         }
 
-        // 5. Broadcast real-time challenge leaderboard updates
+        // 6. Broadcast real-time challenge leaderboard updates
         try {
             challengeService.recalculateAndBroadcastLeaderboards(userId);
         } catch (Exception e) {
@@ -188,8 +210,7 @@ public class ActivityServiceImpl implements ActivityService {
     @Override
     @Transactional(readOnly = true)
     public ActivitySummaryResponse getActivitySummary(Long userId, Instant startTime, Instant endTime) {
-        if (userProvider.findById(userId).isEmpty())
-        {
+        if (userProvider.findById(userId).isEmpty()) {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 

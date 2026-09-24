@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { wsManager } from '../websocket/stompClient';
-import { InactivitySuggestionMessage, NotificationItem } from '../types';
+import { InactivitySuggestionMessage, ActivityUpdateMessage, NotificationItem } from '../types';
 import { useAuth } from './AuthContext';
 
 interface WebSocketContextType {
@@ -8,6 +9,7 @@ interface WebSocketContextType {
   notifications: NotificationItem[];
   unreadCount: number;
   latestAiSuggestion: InactivitySuggestionMessage | null;
+  latestActivityUpdate: ActivityUpdateMessage | null;
   markAsRead: (id: string) => void;
   clearAll: () => void;
   dismissAiSuggestion: () => void;
@@ -18,17 +20,35 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(undefin
 
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+
   const [isConnected, setIsConnected] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     const saved = localStorage.getItem('wellness_notifications');
     return saved ? JSON.parse(saved) : [];
   });
   const [latestAiSuggestion, setLatestAiSuggestion] = useState<InactivitySuggestionMessage | null>(null);
+  const [latestActivityUpdate, setLatestActivityUpdate] = useState<ActivityUpdateMessage | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
-    wsManager.connect(() => setIsConnected(true), () => setIsConnected(false));
+    wsManager.connect(
+      () => setIsConnected(true),
+      () => setIsConnected(false)
+    );
+
+    // Real-time User Activity STOMP updates
+    const unsubscribeUserActivity = wsManager.subscribeToUserActivity(user.id, (data) => {
+      console.log('[STOMP] Received real-time activity update:', data);
+      setLatestActivityUpdate(data);
+
+      // Invalidate react-query cache so REST queries refetch immediately
+      queryClient.invalidateQueries({ queryKey: ['todaySteps'] });
+      queryClient.invalidateQueries({ queryKey: ['activitySummaryToday'] });
+      queryClient.invalidateQueries({ queryKey: ['activeChallenges'] });
+      queryClient.invalidateQueries({ queryKey: ['teamLeaderboard'] });
+    });
 
     // Global Inactivity Suggestions
     const unsubscribeGlobal = wsManager.subscribeToInactivitySuggestions((data) => {
@@ -45,7 +65,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
 
     // User-specific Inactivity Suggestions
-    const unsubscribeUser = wsManager.subscribeToUserInactivity(user.id, (data) => {
+    const unsubscribeUserInactivity = wsManager.subscribeToUserInactivity(user.id, (data) => {
       setLatestAiSuggestion(data);
       const newNotif: NotificationItem = {
         id: `inactivity-user-${Date.now()}`,
@@ -59,11 +79,12 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
 
     return () => {
+      unsubscribeUserActivity();
       unsubscribeGlobal();
-      unsubscribeUser();
+      unsubscribeUserInactivity();
       wsManager.disconnect();
     };
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id, queryClient]);
 
   useEffect(() => {
     localStorage.setItem('wellness_notifications', JSON.stringify(notifications));
@@ -110,6 +131,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         notifications,
         unreadCount,
         latestAiSuggestion,
+        latestActivityUpdate,
         markAsRead,
         clearAll,
         dismissAiSuggestion,

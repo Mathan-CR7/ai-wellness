@@ -1,51 +1,57 @@
 package com.kovanlabs.wellness.service.impl;
 
+import com.kovanlabs.wellness.dto.activity.ActivityUpdateMessage;
 import com.kovanlabs.wellness.dto.step.DailyStepResponse;
 import com.kovanlabs.wellness.dto.step.StepSyncRequest;
 import com.kovanlabs.wellness.entity.DailyStepEntity;
+import com.kovanlabs.wellness.entity.UserEntity;
 import com.kovanlabs.wellness.exception.ResourceNotFoundException;
 import com.kovanlabs.wellness.provider.UserProvider;
 import com.kovanlabs.wellness.repository.DailyStepRepository;
 import com.kovanlabs.wellness.service.ChallengeService;
 import com.kovanlabs.wellness.service.InactivityDetectionService;
 import com.kovanlabs.wellness.service.StepService;
+import com.kovanlabs.wellness.service.WebSocketLeaderboardPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Optional;
 
 @Service
 @Transactional
-public class StepServiceImpl implements StepService
-{
+public class StepServiceImpl implements StepService {
+
     private static final Logger log = LoggerFactory.getLogger(StepServiceImpl.class);
 
     private final DailyStepRepository dailyStepRepository;
     private final UserProvider userProvider;
     private final ChallengeService challengeService;
     private final InactivityDetectionService inactivityDetectionService;
+    private final WebSocketLeaderboardPublisher leaderboardPublisher;
 
     public StepServiceImpl(
             DailyStepRepository dailyStepRepository,
             UserProvider userProvider,
             @Lazy ChallengeService challengeService,
-            @Lazy InactivityDetectionService inactivityDetectionService
+            @Lazy InactivityDetectionService inactivityDetectionService,
+            WebSocketLeaderboardPublisher leaderboardPublisher
     ) {
         this.dailyStepRepository = dailyStepRepository;
         this.userProvider = userProvider;
         this.challengeService = challengeService;
         this.inactivityDetectionService = inactivityDetectionService;
+        this.leaderboardPublisher = leaderboardPublisher;
     }
 
     @Override
     public DailyStepResponse syncSteps(Long userId, StepSyncRequest request) {
-        if (userProvider.findById(userId).isEmpty())
-        {
+        if (userProvider.findById(userId).isEmpty()) {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
@@ -72,6 +78,28 @@ public class StepServiceImpl implements StepService
 
         DailyStepEntity savedEntity = dailyStepRepository.save(entity);
 
+        // Broadcast real-time user activity STOMP update
+        try {
+            UserEntity user = userProvider.findById(userId).orElse(null);
+            String email = user != null ? user.getEmail() : "";
+            double distance = steps * 0.75;
+            double calories = steps * 0.04;
+
+            ActivityUpdateMessage updateMsg = ActivityUpdateMessage.builder()
+                    .userId(userId)
+                    .userEmail(email)
+                    .date(targetDate.toString())
+                    .steps(steps)
+                    .distanceMeters(distance)
+                    .caloriesBurned(calories)
+                    .timestamp(Instant.now())
+                    .build();
+
+            leaderboardPublisher.publishUserActivityUpdate(userId, updateMsg);
+        } catch (Exception e) {
+            log.warn("Failed to broadcast user activity STOMP update for userId={}: {}", userId, e.getMessage());
+        }
+
         try {
             inactivityDetectionService.registerStepSync(userId, steps);
         } catch (Exception e) {
@@ -89,8 +117,7 @@ public class StepServiceImpl implements StepService
 
     @Override
     @Transactional(readOnly = true)
-    public DailyStepResponse getTodaySteps(Long userId)
-    {
+    public DailyStepResponse getTodaySteps(Long userId) {
         LocalDate today = LocalDate.now(ZoneId.systemDefault());
         return getStepsForDate(userId, today);
     }
@@ -116,8 +143,7 @@ public class StepServiceImpl implements StepService
         return toResponse(entity);
     }
 
-    private DailyStepResponse toResponse(DailyStepEntity entity)
-    {
+    private DailyStepResponse toResponse(DailyStepEntity entity) {
         return DailyStepResponse.builder()
                 .id(entity.getId())
                 .userId(entity.getUserId())

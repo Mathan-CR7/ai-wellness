@@ -1,4 +1,5 @@
 package com.kovanlabs.wellness.service.impl;
+
 import com.kovanlabs.wellness.dto.team.LeaderboardEntry;
 import com.kovanlabs.wellness.dto.team.TeamLeaderboardResponse;
 import com.kovanlabs.wellness.entity.DailyStepEntity;
@@ -11,6 +12,7 @@ import com.kovanlabs.wellness.repository.DailyStepRepository;
 import com.kovanlabs.wellness.service.LeaderboardService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -51,22 +53,18 @@ public class LeaderboardServiceImpl implements LeaderboardService {
         LocalDate today = LocalDate.now(ZoneId.systemDefault());
 
         for (UserEntity user : targetUsers) {
-            Long activitySteps = activityProvider.sumSteps(user.getId(), startTime, endTime);
-            Long dailySteps = dailyStepRepository.findByUserIdAndDate(user.getId(), today)
+            Long todaySteps = dailyStepRepository.findByUserIdAndDate(user.getId(), today)
                     .map(DailyStepEntity::getSteps)
                     .orElse(0L);
 
-            long totalSteps = Math.max(activitySteps != null ? activitySteps : 0L, dailySteps != null ? dailySteps : 0L);
+            LocalDate startDate = startTime != null ? startTime.atZone(ZoneId.systemDefault()).toLocalDate() : today.minusDays(7);
+            LocalDate endDate = endTime != null ? endTime.atZone(ZoneId.systemDefault()).toLocalDate() : today;
 
-            Double distance = activityProvider.sumDistance(user.getId(), startTime, endTime);
-            if (distance == null || distance == 0.0) {
-                distance = totalSteps * 0.75; // Real distance approximation in meters
-            }
+            Long rangeSteps = dailyStepRepository.sumStepsByUserIdAndDateRange(user.getId(), startDate, endDate);
+            long totalSteps = Math.max(todaySteps, rangeSteps != null ? rangeSteps : 0L);
 
-            Double calories = activityProvider.sumCalories(user.getId(), startTime, endTime);
-            if (calories == null || calories == 0.0) {
-                calories = totalSteps * 0.04; // Real calorie calculation
-            }
+            Double distance = totalSteps * 0.75;
+            Double calories = totalSteps * 0.04;
 
             String displayName = user.getFullName() != null && !user.getFullName().isBlank()
                     ? user.getFullName()
