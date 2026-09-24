@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
-import { Dumbbell, Plus, Flame, Clock, Calendar, Play, Pause, CheckCircle, Trash2, BellRing, Timer } from 'lucide-react';
+import { Dumbbell, Plus, Flame, Clock, Calendar, Play, Pause, CheckCircle, Trash2, BellRing, Timer, Lock } from 'lucide-react';
 
 export interface ScheduledTask {
   id: string;
@@ -27,6 +27,7 @@ export const ExercisesPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'schedule' | 'instant'>('schedule');
+  const [, setTick] = useState(0);
 
   // Form States
   const [exerciseType, setExerciseType] = useState('WALKING');
@@ -85,9 +86,11 @@ export const ExercisesPage: React.FC = () => {
     },
   });
 
-  // Timer interval for running tasks
+  // 1-second ticker for running countdowns & unlocking scheduled tasks dynamically
   useEffect(() => {
     const interval = setInterval(() => {
+      setTick((t) => t + 1);
+
       setScheduledTasks((prevTasks) =>
         prevTasks.map((task) => {
           if (task.status !== 'RUNNING') return task;
@@ -179,9 +182,37 @@ export const ExercisesPage: React.FC = () => {
   };
 
   const handleStartTask = (id: string) => {
+    const task = scheduledTasks.find((t) => t.id === id);
+    if (task && task.scheduledDateTime) {
+      const targetTime = new Date(task.scheduledDateTime).getTime();
+      const now = Date.now();
+      if (targetTime > now) {
+        setNotificationToast(`🔒 Cannot start yet! Workout is scheduled for ${formatDate(task.scheduledDateTime)}`);
+        setTimeout(() => setNotificationToast(null), 4000);
+        return;
+      }
+    }
+
     setScheduledTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, status: 'RUNNING', startedAt: new Date().toISOString() } : t))
     );
+  };
+
+  const getScheduleTimeUntilText = (scheduledDateTime: string) => {
+    if (!scheduledDateTime) return 'Ready to Start';
+    const target = new Date(scheduledDateTime).getTime();
+    const now = Date.now();
+    const diffMs = target - now;
+
+    if (diffMs <= 0) return 'Scheduled Time Reached! Ready to Start';
+
+    const diffMins = Math.ceil(diffMs / (1000 * 60));
+    if (diffMins < 60) {
+      return `Starts in ${diffMins} min${diffMins > 1 ? 's' : ''}`;
+    }
+    const hours = Math.floor(diffMins / 60);
+    const remMins = diffMins % 60;
+    return `Starts in ${hours}h ${remMins}m`;
   };
 
   const handlePauseTask = (id: string) => {
@@ -344,7 +375,7 @@ export const ExercisesPage: React.FC = () => {
                           ? 'Timer Paused'
                           : task.status === 'COMPLETED'
                           ? 'Workout Finished 🎉'
-                          : 'Ready to Start'}
+                          : getScheduleTimeUntilText(task.scheduledDateTime)}
                       </div>
                       {/* Progress Bar */}
                       <div className="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
@@ -365,13 +396,32 @@ export const ExercisesPage: React.FC = () => {
                   {/* Action Buttons */}
                   <div className="pt-2 flex items-center gap-2">
                     {task.status === 'SCHEDULED' && (
-                      <Button
-                        variant="primary"
-                        className="w-full text-xs py-2 bg-emerald-600 hover:bg-emerald-700"
-                        onClick={() => handleStartTask(task.id)}
-                      >
-                        <Play className="w-3.5 h-3.5 mr-1.5 fill-current" /> Start Timer Now
-                      </Button>
+                      (() => {
+                        const isReady = !task.scheduledDateTime || new Date(task.scheduledDateTime).getTime() <= Date.now();
+                        const timeUntil = getScheduleTimeUntilText(task.scheduledDateTime);
+
+                        if (isReady) {
+                          return (
+                            <Button
+                              variant="primary"
+                              className="w-full text-xs py-2 bg-emerald-600 hover:bg-emerald-700 animate-pulse"
+                              onClick={() => handleStartTask(task.id)}
+                            >
+                              <Play className="w-3.5 h-3.5 mr-1.5 fill-current" /> Start Timer Now
+                            </Button>
+                          );
+                        }
+
+                        return (
+                          <Button
+                            variant="outline"
+                            disabled
+                            className="w-full text-xs py-2 bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-800"
+                          >
+                            <Lock className="w-3.5 h-3.5 mr-1.5 text-amber-500" /> {timeUntil}
+                          </Button>
+                        );
+                      })()
                     )}
 
                     {task.status === 'RUNNING' && (

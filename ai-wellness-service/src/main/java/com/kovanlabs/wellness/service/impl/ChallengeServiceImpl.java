@@ -263,7 +263,8 @@ public class ChallengeServiceImpl implements ChallengeService {
         }
     }
 
-    private ChallengeMemberResponse toMemberResponse(ChallengeMemberEntity entity, UserEntity user) {
+    private ChallengeMemberResponse toMemberResponse(ChallengeMemberEntity entity, UserEntity user)
+    {
         return ChallengeMemberResponse.builder()
                 .id(entity.getId())
                 .challengeId(entity.getChallengeId())
@@ -273,4 +274,6 @@ public class ChallengeServiceImpl implements ChallengeService {
                 .joinedAt(entity.getJoinedAt())
                 .build();
     }
+
+
 }
