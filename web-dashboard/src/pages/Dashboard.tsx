@@ -30,7 +30,7 @@ export const Dashboard: React.FC = () => {
   const { data: todaySteps, isLoading: stepsLoading } = useQuery({
     queryKey: ['todaySteps'],
     queryFn: () => activityService.getTodaySteps(),
-    refetchInterval: 10000,
+    refetchInterval: 3000,
   });
 
   const { data: activitySummary } = useQuery({
@@ -40,23 +40,25 @@ export const Dashboard: React.FC = () => {
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
       return activityService.getActivitySummary(startOfDay, now.toISOString());
     },
-    refetchInterval: 10000,
+    refetchInterval: 3000,
   });
 
   const { data: trends } = useQuery({
     queryKey: ['activityTrends'],
     queryFn: () => activityService.getActivityTrends(),
+    refetchInterval: 5000,
   });
 
   const { data: challenges } = useQuery({
     queryKey: ['activeChallenges'],
     queryFn: () => challengeService.getActiveChallenges(),
+    refetchInterval: 5000,
   });
 
   const { data: leaderboard } = useQuery({
     queryKey: ['teamLeaderboard', 1],
     queryFn: () => leaderboardService.getTeamLeaderboard(1),
-    refetchInterval: 10000,
+    refetchInterval: 3000,
   });
 
   // Dynamic Greeting based on current time
@@ -67,8 +69,8 @@ export const Dashboard: React.FC = () => {
     return 'Good Evening';
   };
 
-  const steps = todaySteps?.steps || 0;
-  const goal = todaySteps?.goal || user?.dailyStepGoal || 10000;
+  const steps = Math.max(todaySteps?.steps || 0, activitySummary?.totalSteps || 0);
+  const goal = user?.dailyStepGoal || todaySteps?.goal || 10000;
   const progressPercent = Math.min(Math.round((steps / goal) * 100), 100);
 
   // Use genuine Health Connect synced metrics from backend activity summary, fallback to step formula if no sync

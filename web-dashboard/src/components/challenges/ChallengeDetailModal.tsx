@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { challengeService } from '../../api/challengeService';
-import { ChallengeResponse } from '../../types';
+import { ChallengeResponse, ChallengeLeaderboardResponse } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { wsManager } from '../../websocket/stompClient';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -26,18 +27,36 @@ export const ChallengeDetailModal: React.FC<ChallengeDetailModalProps> = ({
 
   const challengeId = challenge?.id || 0;
 
-  // Query challenge details, members, and leaderboard
+  // Query challenge details, members, and leaderboard with live polling
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ['challengeMembers', challengeId],
     queryFn: () => challengeService.getChallengeMembers(challengeId),
     enabled: isOpen && challengeId > 0,
+    refetchInterval: 5000,
   });
 
   const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
     queryKey: ['challengeLeaderboard', challengeId],
     queryFn: () => challengeService.getChallengeLeaderboard(challengeId),
     enabled: isOpen && challengeId > 0,
+    refetchInterval: 5000,
   });
+
+  // Real-time WebSocket listener for instant leaderboard updates
+  useEffect(() => {
+    if (!isOpen || challengeId <= 0) return;
+
+    const unsubscribe = wsManager.subscribe<ChallengeLeaderboardResponse>(
+      `/topic/challenges/${challengeId}/leaderboard`,
+      (updatedData) => {
+        queryClient.setQueryData(['challengeLeaderboard', challengeId], updatedData);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isOpen, challengeId, queryClient]);
 
   const joinMutation = useMutation({
     mutationFn: (id: number) => challengeService.joinChallenge(id),
@@ -62,7 +81,7 @@ export const ChallengeDetailModal: React.FC<ChallengeDetailModalProps> = ({
   const targetSteps = challenge.targetValue || challenge.targetSteps || 10000;
   const isUserJoined =
     challenge.isParticipant ||
-    (members && user && members.some((m) => m.userId === user.id || m.userEmail === user.email));
+    (members && user && members.some((m) => m.userId === user.id || (m.email && user.email && m.email.toLowerCase() === user.email.toLowerCase())));
 
   const participantCount = members?.length || challenge.totalParticipants || 1;
 
@@ -70,6 +89,34 @@ export const ChallengeDetailModal: React.FC<ChallengeDetailModalProps> = ({
     if (!isoString) return '---';
     return new Date(isoString).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
   };
+
+  const rawEntries = leaderboard?.leaderboard || leaderboard?.rankings || [];
+
+  const displayEntries: Array<{
+    rank: number;
+    userId: number;
+    fullName?: string;
+    email?: string;
+    totalSteps: number;
+    progressPercentage: number;
+  }> =
+    rawEntries.length > 0
+      ? rawEntries.map((r) => ({
+          rank: r.rank || 1,
+          userId: r.userId,
+          fullName: r.fullName || r.userFullName,
+          email: r.email || r.userEmail,
+          totalSteps: r.totalSteps ?? r.totalStepsInChallenge ?? 0,
+          progressPercentage: r.progressPercentage || 0,
+        }))
+      : (members || []).map((m, idx) => ({
+          rank: idx + 1,
+          userId: m.userId,
+          fullName: m.fullName || m.userFullName,
+          email: m.email || m.userEmail,
+          totalSteps: m.totalStepsInChallenge || 0,
+          progressPercentage: Math.min(Math.round(((m.totalStepsInChallenge || 0) / targetSteps) * 100), 100),
+        }));
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={challenge.title}>
@@ -156,28 +203,19 @@ export const ChallengeDetailModal: React.FC<ChallengeDetailModalProps> = ({
             </div>
           ) : (
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {(leaderboard?.rankings && leaderboard.rankings.length > 0
-                ? leaderboard.rankings
-                : (members || []).map((m, idx) => ({
-                    rank: idx + 1,
-                    userId: m.userId,
-                    userFullName: m.userFullName,
-                    userEmail: m.userEmail,
-                    totalStepsInChallenge: m.totalStepsInChallenge || 0,
-                    progressPercentage: Math.min(Math.round(((m.totalStepsInChallenge || 0) / targetSteps) * 100), 100),
-                  }))
-              ).map((member) => {
+              {displayEntries.map((member) => {
                 const isMe =
                   user &&
                   (user.id === member.userId ||
-                    (user.email && member.userEmail && user.email.toLowerCase() === member.userEmail.toLowerCase()));
+                    (user.email && member.email && user.email.toLowerCase() === member.email.toLowerCase()));
 
-                const currentSteps = member.totalStepsInChallenge || 0;
+                const currentSteps = member.totalSteps || 0;
                 const pct = member.progressPercentage || Math.min(Math.round((currentSteps / targetSteps) * 100), 100);
+                const displayName = member.fullName || member.email || `User #${member.userId}`;
 
                 return (
                   <div
-                    key={member.userId || member.userEmail}
+                    key={member.userId || member.email || member.rank}
                     className={`p-3.5 rounded-xl border transition-all ${
                       isMe
                         ? 'bg-brand-50 dark:bg-brand-950/40 border-brand-500 shadow-xs'
@@ -191,7 +229,7 @@ export const ChallengeDetailModal: React.FC<ChallengeDetailModalProps> = ({
                         </span>
                         <div>
                           <p className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center space-x-1.5">
-                            <span>{member.userFullName || member.userEmail}</span>
+                            <span>{displayName}</span>
                             {isMe && <Badge variant="brand" className="text-[10px] py-0">YOU</Badge>}
                           </p>
                         </div>

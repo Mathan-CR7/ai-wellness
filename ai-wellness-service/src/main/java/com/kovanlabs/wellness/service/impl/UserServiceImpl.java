@@ -65,12 +65,13 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
         user.setFullName(request.getFullName());
-        if (request.getWeightKg() != null)
-        {
+        if (request.getDailyStepGoal() != null && request.getDailyStepGoal() > 0) {
+            user.setDailyStepGoal(request.getDailyStepGoal());
+        }
+        if (request.getWeightKg() != null) {
             user.setWeightKg(request.getWeightKg());
         }
-        if (request.getHeightCm() != null)
-        {
+        if (request.getHeightCm() != null) {
             user.setHeightCm(request.getHeightCm());
         }
         UserEntity updatedUser = userProvider.save(user);

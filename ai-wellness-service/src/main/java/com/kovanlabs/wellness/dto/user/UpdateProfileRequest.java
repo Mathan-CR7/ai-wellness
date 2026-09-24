@@ -1,5 +1,6 @@
 package com.kovanlabs.wellness.dto.user;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,10 +11,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UpdateProfileRequest {
 
     @NotBlank(message = "Full name cannot be blank")
     private String fullName;
+
+    private Integer dailyStepGoal;
 
     private Double weightKg;
 

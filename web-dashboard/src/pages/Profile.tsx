@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../api/userService';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { User, Mail, Target, Scale, Ruler, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Target, Scale, Ruler, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const ProfilePage: React.FC = () => {
   const { user, refreshProfile } = useAuth();
@@ -14,12 +14,23 @@ export const ProfilePage: React.FC = () => {
   const [dailyStepGoal, setDailyStepGoal] = useState(user?.dailyStepGoal || 10000);
   const [weightKg, setWeightKg] = useState(user?.weightKg || 70);
   const [heightCm, setHeightCm] = useState(user?.heightCm || 175);
-  const [message, setMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setFullName(user.fullName || '');
+      setDailyStepGoal(user.dailyStepGoal || 10000);
+      setWeightKg(user.weightKg || 70);
+      setHeightCm(user.heightCm || 175);
+    }
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage('');
+    setSuccessMessage('');
+    setErrorMessage('');
     setIsLoading(true);
 
     try {
@@ -30,9 +41,10 @@ export const ProfilePage: React.FC = () => {
         heightCm: Number(heightCm),
       });
       await refreshProfile();
-      setMessage('Profile updated successfully!');
+      setSuccessMessage('Profile updated successfully!');
     } catch (e: any) {
-      setMessage('Failed to update profile.');
+      const msg = e?.response?.data?.message || e?.message || 'Failed to update profile. Please try again.';
+      setErrorMessage(msg);
     } finally {
       setIsLoading(false);
     }
@@ -62,10 +74,17 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {message && (
+        {successMessage && (
           <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center space-x-2">
             <CheckCircle2 className="w-4 h-4" />
-            <span>{message}</span>
+            <span>{successMessage}</span>
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4" />
+            <span>{errorMessage}</span>
           </div>
         )}
 

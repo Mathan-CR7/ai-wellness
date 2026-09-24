@@ -18,6 +18,7 @@ import com.kovanlabs.wellness.repository.DailyStepRepository;
 import com.kovanlabs.wellness.service.ActivityService;
 import com.kovanlabs.wellness.service.ActivityTrendCalculator;
 import com.kovanlabs.wellness.service.ActivityValidator;
+import com.kovanlabs.wellness.service.ChallengeService;
 import com.kovanlabs.wellness.service.InactivityDetectionService;
 import com.kovanlabs.wellness.service.LeaderboardService;
 import com.kovanlabs.wellness.service.WebSocketLeaderboardPublisher;
@@ -54,6 +55,7 @@ public class ActivityServiceImpl implements ActivityService {
     private final DailyStepRepository dailyStepRepository;
     private final ActivityRepository activityRepository;
     private final InactivityDetectionService inactivityDetectionService;
+    private final ChallengeService challengeService;
 
     public ActivityServiceImpl(
             ActivityProvider activityProvider,
@@ -66,7 +68,8 @@ public class ActivityServiceImpl implements ActivityService {
             TeamProvider teamProvider,
             DailyStepRepository dailyStepRepository,
             ActivityRepository activityRepository,
-            @Lazy InactivityDetectionService inactivityDetectionService
+            @Lazy InactivityDetectionService inactivityDetectionService,
+            @Lazy ChallengeService challengeService
     ) {
         this.activityProvider = activityProvider;
         this.userProvider = userProvider;
@@ -79,6 +82,7 @@ public class ActivityServiceImpl implements ActivityService {
         this.dailyStepRepository = dailyStepRepository;
         this.activityRepository = activityRepository;
         this.inactivityDetectionService = inactivityDetectionService;
+        this.challengeService = challengeService;
     }
 
     @Override
@@ -136,6 +140,13 @@ public class ActivityServiceImpl implements ActivityService {
             log.warn("Failed to broadcast leaderboard update for userId={}: {}", userId, e.getMessage(), e);
         }
 
+        // 5. Broadcast real-time challenge leaderboard updates
+        try {
+            challengeService.recalculateAndBroadcastLeaderboards(userId);
+        } catch (Exception e) {
+            log.warn("Failed to broadcast challenge leaderboard update for userId={}: {}", userId, e.getMessage(), e);
+        }
+
         return activityMapper.toResponse(savedActivity);
     }
 
@@ -150,25 +161,10 @@ public class ActivityServiceImpl implements ActivityService {
 
         List<DailyStepEntity> existingSteps = dailyStepRepository.findByUserIdAndDateBetweenOrderByDateAsc(userId, thirtyDaysAgo, today);
 
-        Map<LocalDate, DailyStepEntity> stepMap = existingSteps.stream()
-                .collect(Collectors.toMap(DailyStepEntity::getDate, d -> d, (d1, d2) -> d1));
-
-        List<DailyStepEntity> fullList = new ArrayList<>();
-        for (LocalDate d = thirtyDaysAgo; !d.isAfter(today); d = d.plusDays(1)) {
-            if (stepMap.containsKey(d)) {
-                fullList.add(stepMap.get(d));
-            } else {
-                long baselineSteps = 4800L + (Math.abs(d.hashCode() + userId.hashCode()) % 3800L);
-                if (d.equals(today)) {
-                    baselineSteps = 5200L;
-                }
-                DailyStepEntity newEntity = DailyStepEntity.builder()
-                        .userId(userId)
-                        .date(d)
-                        .steps(baselineSteps)
-                        .build();
-                fullList.add(dailyStepRepository.save(newEntity));
-            }
+        List<DailyStepEntity> fullList = new ArrayList<>(existingSteps);
+        if (fullList.isEmpty()) {
+            Optional<DailyStepEntity> todayEntity = dailyStepRepository.findByUserIdAndDate(userId, today);
+            todayEntity.ifPresent(fullList::add);
         }
 
         return fullList.stream().map(d -> {
@@ -192,7 +188,8 @@ public class ActivityServiceImpl implements ActivityService {
     @Override
     @Transactional(readOnly = true)
     public ActivitySummaryResponse getActivitySummary(Long userId, Instant startTime, Instant endTime) {
-        if (userProvider.findById(userId).isEmpty()) {
+        if (userProvider.findById(userId).isEmpty())
+        {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
@@ -246,7 +243,6 @@ public class ActivityServiceImpl implements ActivityService {
                     .sourceDevice(a.getSourceDevice())
                     .build();
         }).collect(Collectors.toList());
-
         return activityTrendCalculator.calculate7DayTrend(userId, activityEntities, Instant.now());
     }
 }

@@ -3,6 +3,7 @@ package com.kovanlabs.wellness.service.impl;
 import com.kovanlabs.wellness.dto.challenge.*;
 import com.kovanlabs.wellness.entity.ChallengeEntity;
 import com.kovanlabs.wellness.entity.ChallengeMemberEntity;
+import com.kovanlabs.wellness.entity.DailyStepEntity;
 import com.kovanlabs.wellness.entity.UserEntity;
 import com.kovanlabs.wellness.entity.enums.ChallengeTargetType;
 import com.kovanlabs.wellness.exception.ResourceNotFoundException;
@@ -109,14 +110,17 @@ public class ChallengeServiceImpl implements ChallengeService {
 
         LocalDate startDate = challenge.getStartDate().atZone(ZoneId.systemDefault()).toLocalDate();
         LocalDate endDate = challenge.getEndDate().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
 
-        Long steps = dailyStepRepository.sumStepsByUserIdAndDateRange(userId, startDate, endDate);
-        if (steps == null || steps == 0L) {
-            Long activitySteps = activityProvider.sumSteps(userId, challenge.getStartDate(), challenge.getEndDate());
-            steps = activitySteps != null ? activitySteps : 0L;
-        }
+        Long rangeSteps = dailyStepRepository.sumStepsByUserIdAndDateRange(userId, startDate, endDate);
+        Long activitySteps = activityProvider.sumSteps(userId, challenge.getStartDate(), challenge.getEndDate());
+        Long todayDailySteps = (!today.isBefore(startDate) && !today.isAfter(endDate))
+                ? dailyStepRepository.findByUserIdAndDate(userId, today).map(DailyStepEntity::getSteps).orElse(0L)
+                : 0L;
 
-        double currentValue = steps.doubleValue();
+        long steps = Math.max(Math.max(rangeSteps != null ? rangeSteps : 0L, activitySteps != null ? activitySteps : 0L), todayDailySteps);
+
+        double currentValue = (double) steps;
         double progressPercent = Math.min(100.0, (currentValue / challenge.getTargetValue()) * 100.0);
         boolean isCompleted = currentValue >= challenge.getTargetValue();
 
@@ -204,6 +208,7 @@ public class ChallengeServiceImpl implements ChallengeService {
         List<ChallengeMemberEntity> members = challengeMemberRepository.findByChallengeId(challengeId);
         LocalDate startDate = challenge.getStartDate().atZone(ZoneId.systemDefault()).toLocalDate();
         LocalDate endDate = challenge.getEndDate().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
 
         List<LeaderboardEntryDto> entries = new ArrayList<>();
 
@@ -211,14 +216,16 @@ public class ChallengeServiceImpl implements ChallengeService {
             UserEntity user = userProvider.findById(m.getUserId()).orElse(null);
             String name = user != null ? user.getFullName() : "User #" + m.getUserId();
 
-            Long totalSteps = dailyStepRepository.sumStepsByUserIdAndDateRange(m.getUserId(), startDate, endDate);
-            if (totalSteps == null || totalSteps == 0L) {
-                Long actSteps = activityProvider.sumSteps(m.getUserId(), challenge.getStartDate(), challenge.getEndDate());
-                totalSteps = actSteps != null ? actSteps : 0L;
-            }
+            Long rangeSteps = dailyStepRepository.sumStepsByUserIdAndDateRange(m.getUserId(), startDate, endDate);
+            Long actSteps = activityProvider.sumSteps(m.getUserId(), challenge.getStartDate(), challenge.getEndDate());
+            Long todayDailySteps = (!today.isBefore(startDate) && !today.isAfter(endDate))
+                    ? dailyStepRepository.findByUserIdAndDate(m.getUserId(), today).map(DailyStepEntity::getSteps).orElse(0L)
+                    : 0L;
+
+            long totalSteps = Math.max(Math.max(rangeSteps != null ? rangeSteps : 0L, actSteps != null ? actSteps : 0L), todayDailySteps);
 
             double target = challenge.getTargetValue() != null ? challenge.getTargetValue() : 10000.0;
-            double progress = Math.min(100.0, (totalSteps.doubleValue() / target) * 100.0);
+            double progress = Math.min(100.0, ((double) totalSteps / target) * 100.0);
 
             entries.add(LeaderboardEntryDto.builder()
                     .userId(m.getUserId())
@@ -230,7 +237,8 @@ public class ChallengeServiceImpl implements ChallengeService {
 
         entries.sort((a, b) -> Long.compare(b.getTotalSteps(), a.getTotalSteps()));
 
-        for (int i = 0; i < entries.size(); i++) {
+        for (int i = 0; i < entries.size(); i++)
+        {
             entries.get(i).setRank(i + 1);
         }
 

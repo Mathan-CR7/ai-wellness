@@ -34,6 +34,9 @@ public class UserEntity {
     @Column(name = "height_cm")
     private Double heightCm;
 
+    @Column(name = "daily_step_goal")
+    private Integer dailyStepGoal;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private UserRole role;
@@ -49,6 +52,9 @@ public class UserEntity {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (this.dailyStepGoal == null) {
+            this.dailyStepGoal = 10000;
+        }
     }
 
     @PreUpdate

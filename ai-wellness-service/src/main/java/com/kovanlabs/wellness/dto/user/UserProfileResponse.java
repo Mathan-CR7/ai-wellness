@@ -20,6 +20,8 @@ public class UserProfileResponse {
 
     private String fullName;
 
+    private Integer dailyStepGoal;
+
     private Double weightKg;
 
     private Double heightCm;

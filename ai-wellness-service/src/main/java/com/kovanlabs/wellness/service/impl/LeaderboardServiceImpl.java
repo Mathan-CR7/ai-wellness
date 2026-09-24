@@ -1,5 +1,4 @@
 package com.kovanlabs.wellness.service.impl;
-
 import com.kovanlabs.wellness.dto.team.LeaderboardEntry;
 import com.kovanlabs.wellness.dto.team.TeamLeaderboardResponse;
 import com.kovanlabs.wellness.entity.DailyStepEntity;
@@ -12,7 +11,6 @@ import com.kovanlabs.wellness.repository.DailyStepRepository;
 import com.kovanlabs.wellness.service.LeaderboardService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -47,7 +45,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
         TeamEntity team = teamProvider.findTeamById(teamId).orElse(null);
         String teamName = team != null ? team.getName() : "Alpha Squad";
 
-        // Always query all registered users so real Health Connect step data for every user is dynamically calculated
         List<UserEntity> targetUsers = userProvider.findAll();
 
         List<LeaderboardEntry> entries = new ArrayList<>();
@@ -85,7 +82,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                     .build());
         }
 
-        // Sort descending by total steps from real Health Connect data
         entries.sort(Comparator.comparing(LeaderboardEntry::getTotalSteps).reversed());
 
         for (int i = 0; i < entries.size(); i++) {
@@ -101,4 +97,3 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                 .build();
     }
 }
-

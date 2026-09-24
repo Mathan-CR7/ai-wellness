@@ -10,6 +10,7 @@ import org.mapstruct.MappingConstants;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface UserMapper {
 
+    @Mapping(target = "dailyStepGoal", source = "dailyStepGoal")
     UserProfileResponse toProfileResponse(UserEntity entity);
 
     @Mapping(target = "id", ignore = true)

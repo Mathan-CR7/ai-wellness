@@ -44,7 +44,8 @@ public class StepServiceImpl implements StepService
 
     @Override
     public DailyStepResponse syncSteps(Long userId, StepSyncRequest request) {
-        if (userProvider.findById(userId).isEmpty()) {
+        if (userProvider.findById(userId).isEmpty())
+        {
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
@@ -101,11 +102,15 @@ public class StepServiceImpl implements StepService
             throw new ResourceNotFoundException("User not found with id: " + userId);
         }
 
+        Long dailySteps = dailyStepRepository.findByUserIdAndDate(userId, date)
+                .map(DailyStepEntity::getSteps)
+                .orElse(0L);
+
         DailyStepEntity entity = dailyStepRepository.findByUserIdAndDate(userId, date)
                 .orElseGet(() -> DailyStepEntity.builder()
                         .userId(userId)
                         .date(date)
-                        .steps(0L)
+                        .steps(dailySteps)
                         .build());
 
         return toResponse(entity);
@@ -122,5 +127,4 @@ public class StepServiceImpl implements StepService
                 .updatedAt(entity.getUpdatedAt())
                 .build();
     }
-
 }

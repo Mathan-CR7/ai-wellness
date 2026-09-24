@@ -77,18 +77,23 @@ export interface ChallengeMemberResponse {
   id: number;
   challengeId: number;
   userId: number;
-  userEmail: string;
-  userFullName: string;
-  totalStepsInChallenge: number;
+  fullName?: string;
+  userFullName?: string;
+  email?: string;
+  userEmail?: string;
+  totalStepsInChallenge?: number;
   joinedAt: string;
 }
 
 export interface LeaderboardEntryDto {
   rank: number;
   userId: number;
-  userFullName: string;
-  userEmail: string;
-  totalStepsInChallenge: number;
+  fullName?: string;
+  userFullName?: string;
+  email?: string;
+  userEmail?: string;
+  totalSteps?: number;
+  totalStepsInChallenge?: number;
   progressPercentage: number;
   isCurrentUser?: boolean;
 }
@@ -96,18 +101,26 @@ export interface LeaderboardEntryDto {
 export interface ChallengeLeaderboardResponse {
   challengeId: number;
   challengeTitle: string;
-  targetSteps: number;
-  rankings: LeaderboardEntryDto[];
+  targetValue?: number;
+  targetSteps?: number;
+  leaderboard?: LeaderboardEntryDto[];
+  rankings?: LeaderboardEntryDto[];
+  calculatedAt?: string;
 }
 
 export interface ChallengeProgressResponse {
   challengeId: number;
+  userId?: number;
   challengeTitle: string;
-  targetSteps: number;
-  currentSteps: number;
-  progressPercentage: number;
+  targetType?: string;
+  targetValue?: number;
+  targetSteps?: number;
+  currentValue?: number;
+  currentSteps?: number;
+  progressPercent?: number;
+  progressPercentage?: number;
   isCompleted: boolean;
-  daysRemaining: number;
+  daysRemaining?: number;
 }
 
 export interface TeamResponse {
