@@ -7,7 +7,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
-public class WebSocketLeaderboardPublisher {
+public class WebSocketLeaderboardPublisher
+{
 
     private static final Logger log = LoggerFactory.getLogger(WebSocketLeaderboardPublisher.class);
     private final SimpMessagingTemplate messagingTemplate;
@@ -18,13 +19,6 @@ public class WebSocketLeaderboardPublisher {
     }
 
     public void publishLeaderboardUpdate(Long teamId, TeamLeaderboardResponse leaderboard)
-    {
-        String destination = "/topic/leaderboard/" + teamId;
-        log.info("Publishing real-time team leaderboard update to topic: {}", destination);
-        messagingTemplate.convertAndSend(destination, leaderboard);
-    }
-
-    public void publishLeaderBoardUpdate(Long teamId, TeamLeaderboardResponse leaderboard)
     {
         String destination = "/topic/leaderboard/" + teamId;
         log.info("Publishing real-time team leaderboard update to topic: {}", destination);

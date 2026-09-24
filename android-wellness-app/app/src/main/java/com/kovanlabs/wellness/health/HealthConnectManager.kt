@@ -6,6 +6,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.kovanlabs.wellness.model.HealthConnectErrorCode
@@ -16,6 +17,12 @@ import java.time.Instant
  * Manages official Android Health Connect client SDK interactions.
  * Strictly reads genuine user data from Health Connect's StepsRecord.
  * Never fabricates or mocks step data.
+ *
+ * DUAL-STRATEGY READING:
+ * 1. PRIMARY: Aggregate API (deduplicated, matches Health Connect UI)
+ * 2. FALLBACK: Raw StepsRecord records — written in real-time as you walk,
+ *    unlike the aggregate which can lag or only finalize at end-of-day
+ *    on some Android devices and health apps (Google Fit, Samsung Health, etc.)
  */
 class HealthConnectManager(private val context: Context) {
 
@@ -59,9 +66,12 @@ class HealthConnectManager(private val context: Context) {
             val client = HealthConnectClient.getOrCreate(context)
             val timeFilter = TimeRangeFilter.between(startTime, endTime)
 
-            // Use Health Connect's official Aggregate API to get deduplicated total matching Health Connect UI
+            // ── STRATEGY 1: Aggregate API ────────────────────────────────────
+            // Returns deduplicated total matching the Health Connect UI.
+            // On some devices/apps this only finalizes at end-of-day, so we
+            // always try the raw record fallback when this returns 0.
             val aggregateResponse = client.aggregate(
-                androidx.health.connect.client.request.AggregateRequest(
+                AggregateRequest(
                     metrics = setOf(
                         StepsRecord.COUNT_TOTAL,
                         DistanceRecord.DISTANCE_TOTAL,
@@ -71,24 +81,58 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
 
-            val totalSteps = aggregateResponse[StepsRecord.COUNT_TOTAL] ?: 0L
-            val totalDistanceMeters = aggregateResponse[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
-            val totalCalories = aggregateResponse[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
+            var totalSteps       = aggregateResponse[StepsRecord.COUNT_TOTAL] ?: 0L
+            var totalDistMeters  = aggregateResponse[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
+            var totalCalories    = aggregateResponse[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
 
+            // ── STRATEGY 2: Raw StepsRecord fallback ─────────────────────────
+            // Individual StepsRecord entries are written in real-time as you walk
+            // (each walking session → one record). This captures steps that the
+            // aggregate hasn't finalized yet, ensuring real-time data all day.
             if (totalSteps == 0L) {
-                HealthConnectState.StatusError(
-                    HealthConnectErrorCode.NO_DATA_AVAILABLE,
-                    "No step records exist in Health Connect for the queried time range."
+                val rawStepRecords = client.readRecords(
+                    ReadRecordsRequest(
+                        recordType = StepsRecord::class,
+                        timeRangeFilter = timeFilter
+                    )
                 )
-            } else {
-                HealthConnectState.DataRetrieved(
-                    stepCount = totalSteps.toInt(),
-                    distanceMeters = totalDistanceMeters,
-                    caloriesBurned = totalCalories,
-                    startTime = startTime.toString(),
-                    endTime = endTime.toString()
-                )
+                val rawSteps = rawStepRecords.records.sumOf { it.count }
+
+                if (rawSteps > 0L) {
+                    totalSteps = rawSteps
+
+                    // Also read raw distance and calories since aggregate was empty
+                    val rawDistRecords = client.readRecords(
+                        ReadRecordsRequest(
+                            recordType = DistanceRecord::class,
+                            timeRangeFilter = timeFilter
+                        )
+                    )
+                    totalDistMeters = rawDistRecords.records.sumOf { it.distance.inMeters }
+
+                    val rawCalRecords = client.readRecords(
+                        ReadRecordsRequest(
+                            recordType = TotalCaloriesBurnedRecord::class,
+                            timeRangeFilter = timeFilter
+                        )
+                    )
+                    totalCalories = rawCalRecords.records.sumOf { it.energy.inKilocalories }
+                }
             }
+
+            // ── ALWAYS return DataRetrieved — even when steps == 0 ───────────
+            // Previously, returning StatusError for 0 caused the sync loop in
+            // MainActivity to SKIP the POST /api/steps/sync call entirely,
+            // so the database was never updated during the day. Steps only appeared
+            // in the web dashboard after the day ended (Health Connect finalized data).
+            HealthConnectState.DataRetrieved(
+                stepCount        = totalSteps.toInt(),
+                distanceMeters   = totalDistMeters,
+                caloriesBurned   = totalCalories,
+                startTime        = startTime.toString(),
+                endTime          = endTime.toString()
+            )
+
         } catch (e: Exception) {
             HealthConnectState.StatusError(
                 HealthConnectErrorCode.SYNC_FAILED,
