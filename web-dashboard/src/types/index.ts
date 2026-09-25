@@ -22,8 +22,10 @@ export interface DailyStepResponse {
   userId: number;
   date: string;
   steps: number;
-  goal: number;
-  goalMet: boolean;
+  goal?: number;
+  goalMet?: boolean;
+  distanceMeters?: number;
+  caloriesBurned?: number;
   createdAt?: string;
   updatedAt?: string;
 }

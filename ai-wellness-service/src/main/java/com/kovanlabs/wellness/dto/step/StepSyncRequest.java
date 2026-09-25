@@ -23,6 +23,12 @@ public class StepSyncRequest {
     @JsonAlias({"stepCount", "step_count"})
     private Integer stepCount;
 
+    @JsonAlias({"distanceMeters", "distance_meters", "distance"})
+    private Double distanceMeters;
+
+    @JsonAlias({"caloriesBurned", "calories_burned", "calories"})
+    private Double caloriesBurned;
+
     private Object date;
 
     private String sourceDevice;

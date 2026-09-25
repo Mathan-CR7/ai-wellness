@@ -59,6 +59,12 @@ public class StepServiceImpl implements StepService {
         LocalDate targetDate = request.getParsedDate();
         LocalDate serverToday = LocalDate.now(ZoneId.systemDefault());
         Long steps = request.getEffectiveSteps();
+        Double distanceMeters = request.getDistanceMeters() != null && request.getDistanceMeters() > 0
+                ? request.getDistanceMeters()
+                : steps * 0.753;
+        Double caloriesBurned = request.getCaloriesBurned() != null && request.getCaloriesBurned() > 0
+                ? request.getCaloriesBurned()
+                : steps * 0.04;
 
         DailyStepEntity savedEntity = null;
 
@@ -69,11 +75,15 @@ public class StepServiceImpl implements StepService {
                 if (existingOpt.isPresent()) {
                     entity = existingOpt.get();
                     entity.setSteps(steps);
+                    entity.setDistanceMeters(distanceMeters);
+                    entity.setCaloriesBurned(caloriesBurned);
                 } else {
                     entity = DailyStepEntity.builder()
                             .userId(userId)
                             .date(dateToUpdate)
                             .steps(steps)
+                            .distanceMeters(distanceMeters)
+                            .caloriesBurned(caloriesBurned)
                             .build();
                 }
                 DailyStepEntity res = dailyStepRepository.save(entity);
@@ -87,23 +97,21 @@ public class StepServiceImpl implements StepService {
 
         if (savedEntity == null) {
             savedEntity = dailyStepRepository.findByUserIdAndDate(userId, targetDate)
-                    .orElseGet(() -> DailyStepEntity.builder().userId(userId).date(targetDate).steps(steps).build());
+                    .orElseGet(() -> DailyStepEntity.builder().userId(userId).date(targetDate).steps(steps).distanceMeters(distanceMeters).caloriesBurned(caloriesBurned).build());
         }
 
         // Broadcast real-time user activity STOMP update to WebSocket topic
         try {
             UserEntity user = userProvider.findById(userId).orElse(null);
             String email = user != null ? user.getEmail() : "";
-            double distance = steps * 0.753;
-            double calories = steps * 0.04;
 
             ActivityUpdateMessage updateMsg = ActivityUpdateMessage.builder()
                     .userId(userId)
                     .userEmail(email)
                     .date(targetDate.toString())
                     .steps(steps)
-                    .distanceMeters(distance)
-                    .caloriesBurned(calories)
+                    .distanceMeters(distanceMeters)
+                    .caloriesBurned(caloriesBurned)
                     .timestamp(Instant.now())
                     .build();
 
@@ -175,11 +183,16 @@ public class StepServiceImpl implements StepService {
     }
 
     private DailyStepResponse toResponse(DailyStepEntity entity) {
+        long steps = entity.getSteps() != null ? entity.getSteps() : 0L;
+        double distance = entity.getDistanceMeters() != null && entity.getDistanceMeters() > 0 ? entity.getDistanceMeters() : steps * 0.753;
+        double calories = entity.getCaloriesBurned() != null && entity.getCaloriesBurned() > 0 ? entity.getCaloriesBurned() : steps * 0.04;
         return DailyStepResponse.builder()
                 .id(entity.getId())
                 .userId(entity.getUserId())
                 .date(entity.getDate())
-                .steps(entity.getSteps())
+                .steps(steps)
+                .distanceMeters(distance)
+                .caloriesBurned(calories)
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();

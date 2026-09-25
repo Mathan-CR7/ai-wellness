@@ -74,23 +74,29 @@ export const Dashboard: React.FC = () => {
   // Real-time steps: prefer instant WebSocket update, fallback to latest REST response
   const steps = latestActivityUpdate?.steps !== undefined
     ? latestActivityUpdate.steps
-    : Math.max(todaySteps?.steps || 0, activitySummary?.totalSteps || 0);
+    : (todaySteps?.steps ?? activitySummary?.totalSteps ?? 0);
 
   const goal = user?.dailyStepGoal || todaySteps?.goal || 10000;
   const progressPercent = Math.min(Math.round((steps / goal) * 100), 100);
 
-  // Real-time metrics from WebSocket or backend summary, fallback to standard sensor ratio
-  const distanceKm = latestActivityUpdate?.distanceMeters !== undefined && latestActivityUpdate.distanceMeters > 0
-    ? (latestActivityUpdate.distanceMeters / 1000).toFixed(2)
+  // Real-time metrics from WebSocket, todaySteps entity, or backend summary
+  const rawDistance = latestActivityUpdate?.distanceMeters !== undefined && latestActivityUpdate.distanceMeters > 0
+    ? latestActivityUpdate.distanceMeters
+    : todaySteps?.distanceMeters && todaySteps.distanceMeters > 0
+    ? todaySteps.distanceMeters
     : activitySummary?.totalDistanceMeters && activitySummary.totalDistanceMeters > 0
-    ? (activitySummary.totalDistanceMeters / 1000).toFixed(2)
-    : (steps * 0.00075).toFixed(2);
+    ? activitySummary.totalDistanceMeters
+    : steps * 0.753;
+  const distanceKm = (rawDistance / 1000).toFixed(2);
 
-  const caloriesBurned = latestActivityUpdate?.caloriesBurned !== undefined && latestActivityUpdate.caloriesBurned > 0
-    ? Math.round(latestActivityUpdate.caloriesBurned)
+  const rawCalories = latestActivityUpdate?.caloriesBurned !== undefined && latestActivityUpdate.caloriesBurned > 0
+    ? latestActivityUpdate.caloriesBurned
+    : todaySteps?.caloriesBurned && todaySteps.caloriesBurned > 0
+    ? todaySteps.caloriesBurned
     : activitySummary?.totalCaloriesBurned && activitySummary.totalCaloriesBurned > 0
-    ? Math.round(activitySummary.totalCaloriesBurned)
-    : Math.round(steps * 0.04);
+    ? activitySummary.totalCaloriesBurned
+    : steps * 0.04;
+  const caloriesBurned = Math.round(rawCalories);
 
   return (
     <div className="space-y-8 animate-fade-in">

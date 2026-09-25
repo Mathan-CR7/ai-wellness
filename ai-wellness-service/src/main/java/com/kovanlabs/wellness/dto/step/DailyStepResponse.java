@@ -18,6 +18,8 @@ public class DailyStepResponse {
     private Long userId;
     private LocalDate date;
     private Long steps;
+    private Double distanceMeters;
+    private Double caloriesBurned;
     private Instant createdAt;
     private Instant updatedAt;
 }

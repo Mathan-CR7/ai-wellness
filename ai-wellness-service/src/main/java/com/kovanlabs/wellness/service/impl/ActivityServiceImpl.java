@@ -107,11 +107,15 @@ public class ActivityServiceImpl implements ActivityService {
                 if (existingOpt.isPresent()) {
                     stepEntity = existingOpt.get();
                     stepEntity.setSteps(newStepCount);
+                    stepEntity.setDistanceMeters(distanceMeters);
+                    stepEntity.setCaloriesBurned(caloriesBurned);
                 } else {
                     stepEntity = DailyStepEntity.builder()
                             .userId(userId)
                             .date(dateToUpdate)
                             .steps(newStepCount)
+                            .distanceMeters(distanceMeters)
+                            .caloriesBurned(caloriesBurned)
                             .build();
                 }
                 dailyStepRepository.save(stepEntity);
@@ -237,15 +241,15 @@ public class ActivityServiceImpl implements ActivityService {
         }
 
         LocalDate today = LocalDate.now(ZoneId.systemDefault());
-        Long dailySteps = dailyStepRepository.findByUserIdAndDate(userId, today)
-                .map(DailyStepEntity::getSteps)
+        DailyStepEntity entity = dailyStepRepository.findByUserIdAndDate(userId, today)
                 .orElseGet(() -> {
                     List<DailyStepEntity> recent = dailyStepRepository.findByUserIdOrderByDateDesc(userId);
-                    return (!recent.isEmpty()) ? recent.get(0).getSteps() : 0L;
+                    return (!recent.isEmpty()) ? recent.get(0) : DailyStepEntity.builder().userId(userId).date(today).steps(0L).build();
                 });
 
-        Double totalDistance = dailySteps * 0.753;
-        Double totalCalories = dailySteps * 0.04;
+        long dailySteps = entity.getSteps() != null ? entity.getSteps() : 0L;
+        Double totalDistance = entity.getDistanceMeters() != null && entity.getDistanceMeters() > 0 ? entity.getDistanceMeters() : dailySteps * 0.753;
+        Double totalCalories = entity.getCaloriesBurned() != null && entity.getCaloriesBurned() > 0 ? entity.getCaloriesBurned() : dailySteps * 0.04;
 
         return ActivitySummaryResponse.builder()
                 .userId(userId)

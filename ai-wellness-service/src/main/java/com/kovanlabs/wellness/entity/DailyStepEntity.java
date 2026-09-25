@@ -30,6 +30,12 @@ public class DailyStepEntity {
     @Column(name = "steps", nullable = false)
     private Long steps;
 
+    @Column(name = "distance_meters")
+    private Double distanceMeters;
+
+    @Column(name = "calories_burned")
+    private Double caloriesBurned;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

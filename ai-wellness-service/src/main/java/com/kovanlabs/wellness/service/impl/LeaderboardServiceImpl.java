@@ -1,5 +1,4 @@
 package com.kovanlabs.wellness.service.impl;
-
 import com.kovanlabs.wellness.dto.team.LeaderboardEntry;
 import com.kovanlabs.wellness.dto.team.TeamLeaderboardResponse;
 import com.kovanlabs.wellness.entity.DailyStepEntity;
@@ -12,13 +11,13 @@ import com.kovanlabs.wellness.repository.DailyStepRepository;
 import com.kovanlabs.wellness.service.LeaderboardService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+
 
 @Service
 @Transactional
@@ -34,7 +33,8 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             UserProvider userProvider,
             ActivityProvider activityProvider,
             DailyStepRepository dailyStepRepository
-    ) {
+    )
+    {
         this.teamProvider = teamProvider;
         this.userProvider = userProvider;
         this.activityProvider = activityProvider;
@@ -65,7 +65,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
             Double distance = totalSteps * 0.75;
             Double calories = totalSteps * 0.04;
-
+    
             String displayName = user.getFullName() != null && !user.getFullName().isBlank()
                     ? user.getFullName()
                     : user.getEmail();
@@ -82,7 +82,8 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
         entries.sort(Comparator.comparing(LeaderboardEntry::getTotalSteps).reversed());
 
-        for (int i = 0; i < entries.size(); i++) {
+        for (int i = 0; i < entries.size(); i++)
+        {
             entries.get(i).setRank(i + 1);
         }
 
