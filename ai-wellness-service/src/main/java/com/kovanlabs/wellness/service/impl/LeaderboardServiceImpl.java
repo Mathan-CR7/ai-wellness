@@ -65,7 +65,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
             Double distance = totalSteps * 0.75;
             Double calories = totalSteps * 0.04;
-    
+
             String displayName = user.getFullName() != null && !user.getFullName().isBlank()
                     ? user.getFullName()
                     : user.getEmail();

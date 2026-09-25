@@ -38,17 +38,23 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       () => setIsConnected(false)
     );
 
-    // Real-time User Activity STOMP updates
-    const unsubscribeUserActivity = wsManager.subscribeToUserActivity(user.id, (data) => {
+    const handleActivityUpdate = (data: ActivityUpdateMessage) => {
       console.log('[STOMP] Received real-time activity update:', data);
+      // Only accept updates for the authenticated user
+      if (data.userId !== undefined && data.userId !== user.id) return;
       setLatestActivityUpdate(data);
-
       // Invalidate react-query cache so REST queries refetch immediately
       queryClient.invalidateQueries({ queryKey: ['todaySteps'] });
       queryClient.invalidateQueries({ queryKey: ['activitySummaryToday'] });
       queryClient.invalidateQueries({ queryKey: ['activeChallenges'] });
       queryClient.invalidateQueries({ queryKey: ['teamLeaderboard'] });
-    });
+    };
+
+    // Real-time User Activity STOMP updates (user-specific topic)
+    const unsubscribeUserActivity = wsManager.subscribeToUserActivity(user.id, handleActivityUpdate);
+
+    // Global activity topic fallback (covers cases where user-specific topic is missed)
+    const unsubscribeGlobalActivity = wsManager.subscribeToGlobalActivity(handleActivityUpdate);
 
     // Global Inactivity Suggestions
     const unsubscribeGlobal = wsManager.subscribeToInactivitySuggestions((data) => {
@@ -80,6 +86,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     return () => {
       unsubscribeUserActivity();
+      unsubscribeGlobalActivity();
       unsubscribeGlobal();
       unsubscribeUserInactivity();
       wsManager.disconnect();

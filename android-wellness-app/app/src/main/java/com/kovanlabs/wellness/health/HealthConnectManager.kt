@@ -1,5 +1,4 @@
 package com.kovanlabs.wellness.health
-
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
@@ -13,17 +12,6 @@ import com.kovanlabs.wellness.model.HealthConnectErrorCode
 import com.kovanlabs.wellness.model.HealthConnectState
 import java.time.Instant
 
-/**
- * Manages official Android Health Connect client SDK interactions.
- * Strictly reads genuine user data from Health Connect's StepsRecord.
- * Never fabricates or mocks step data.
- *
- * DUAL-STRATEGY READING:
- * 1. PRIMARY: Aggregate API (deduplicated, matches Health Connect UI)
- * 2. FALLBACK: Raw StepsRecord records — written in real-time as you walk,
- *    unlike the aggregate which can lag or only finalize at end-of-day
- *    on some Android devices and health apps (Google Fit, Samsung Health, etc.)
- */
 class HealthConnectManager(private val context: Context) {
 
     val REQUIRED_PERMISSIONS = setOf(
@@ -32,15 +20,18 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
     )
 
-    fun getSdkStatus(): Int {
+    fun getSdkStatus(): Int
+    {
         return HealthConnectClient.getSdkStatus(context)
     }
 
-    fun isHealthConnectAvailable(): Boolean {
+    fun isHealthConnectAvailable(): Boolean
+    {
         return getSdkStatus() == HealthConnectClient.SDK_AVAILABLE
     }
 
-    suspend fun hasPermissionsGranted(): Boolean {
+    suspend fun hasPermissionsGranted(): Boolean
+    {
         if (!isHealthConnectAvailable()) return false
         val client = HealthConnectClient.getOrCreate(context)
         val granted = client.permissionController.getGrantedPermissions()
@@ -55,7 +46,8 @@ class HealthConnectManager(private val context: Context) {
             )
         }
 
-        if (!hasPermissionsGranted()) {
+        if (!hasPermissionsGranted())
+        {
             return HealthConnectState.StatusError(
                 HealthConnectErrorCode.PERMISSION_REQUIRED,
                 "Health Connect READ_STEPS permission is required to read activity data."
